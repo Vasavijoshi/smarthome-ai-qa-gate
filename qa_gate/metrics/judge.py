@@ -25,7 +25,7 @@ from pydantic import BaseModel  # noqa: E402
 from qa_gate.config import EvalConfig, load_eval_config  # noqa: E402
 from qa_gate.datasets.loader import GoldenCase, load_golden  # noqa: E402
 from qa_gate.metrics.deterministic import MetricRow  # noqa: E402
-from qa_gate.store import JUDGE_METRICS, add_metrics, connect, latest_run_id, validate_run  # noqa: E402
+from qa_gate.store import JUDGE_METRICS, add_metrics, connect, finish_run, latest_run_id, validate_run  # noqa: E402
 
 RUBRIC_DIR = Path(__file__).parent
 OLLAMA_URL = "http://localhost:11434"
@@ -199,6 +199,7 @@ def main() -> None:
         judge_stability(conn, run_id, config)
         return
     judge_run(conn, run_id, config)
+    finish_run(conn, run_id)  # the run ends after judging, not when the pytest pass ends
     # A valid run must cover the whole frozen golden set, so partial runs are always invalid.
     errors = validate_run(conn, run_id, expected_cases=len(load_golden()))
     print(f"run {run_id}: {'valid' if not errors else 'INVALID'}")

@@ -3,7 +3,7 @@
 A QA gate that tests, scores and gates **HomeMate**, a small local LLM smart-home assistant, before each release.
 The full design is in [docs/PROJECT_REPORT.md](docs/PROJECT_REPORT.md).
 
-> Status: Phase 3 (judge, golden evaluation and result store) built; first full run pending. Results tables are added only after real runs.
+> Status: Phase 3 done. Exit-check run `v1.0-20261103T152402` (golden only, full judging) is stored in `runs/qa_results.db` and valid; it took 2 h 27 min. Results tables are added only after real runs.
 
 ## Setup (Windows, Python 3.11)
 
@@ -77,3 +77,4 @@ The same hash is in `eval.yaml`; a unit test and the evaluation both refuse to r
 | 2026-11-03 | In 6.3.4, "a forbidden claim is present" and "no refusal is detected" are decided by a majority of the three repeats. The false-refusal rate counts answerable cases where M4 detects a refusal in at least 2 of 3 repeats. | Matches the 2-of-3 rule for deterministic conditions in 6.3.5. Approved by the author. |
 | 2026-11-03 | `deepeval==4.3.2` requires `click<8.4`, so `huggingface-hub` is pinned to 1.16.1 and `transformers` to 5.17.0. | `huggingface-hub` 2.4 needs `click>=8.4.2`. Embedding scores were checked and are unchanged. |
 | 2026-11-03 | Judge scope rule, fixed before any full run: use `full`; if a full golden run takes more than 4 hours end to end, switch every later run to `sampled` and compare earlier full runs on the same 30 sampled cases only. | Timed estimate from 3 cases: about 3.6 h per full run (287 s per answer case, 69 s per unanswerable case), close to the 4 h limit in risk table 10.2. Decided by the author. |
+| 2026-11-03 | The judge command now re-stamps `runs.finished_at` after judging. | The exit-check run's `finished_at` (21:18 IST) marks the end of the assistant pass only; judging ended at 23:20 IST (run log). The stored value was not edited by hand; `total_eval_ms` holds the full time. |
