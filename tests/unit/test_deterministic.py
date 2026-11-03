@@ -264,3 +264,41 @@ def test_refusals_that_echo_the_question_pass_m3(template):
             answer = template.format(q=case.question)
             assert refusal_detected(answer), case.id
             assert forbidden_claim_check(case.forbidden_claims, answer) == 1, case.id
+
+
+# ---- M4 Phase 2.1 refusal variants ----
+@pytest.mark.parametrize(
+    "answer",
+    [
+        "I do not have anything on that topic.",
+        "The context doesn't contain that detail.",
+        "The manuals don't provide a figure for this.",
+        "There are no details about that in the documents.",
+        "That information is not provided.",
+        "It is not available in the documentation I have.",
+        "I couldn't find that anywhere.",
+        "There is no mention of that feature.",
+    ],
+)
+def test_refusal_variants_detected(answer):
+    assert refusal_detected(answer)
+
+
+@pytest.mark.parametrize(
+    "answer",
+    [
+        "Set the timer in steps of 30 minutes, up to 480 minutes.",
+        "The lock has a 1-year warranty.",
+        "Wipe the blades with a soft, damp cloth.",
+        "The tank holds 7 litres and refills in about 30 minutes.",
+        "Yes, the mechanical key always works, even with empty batteries.",
+        "Hold the power button for 5 seconds until the fan beeps twice.",
+    ],
+)
+def test_refusal_variants_not_flagged_on_normal_answers(answer):
+    assert not refusal_detected(answer)
+
+
+def test_known_limit_does_not_include_flags_a_real_answer():
+    """Documented weakness: 'does not include' also appears in legitimate answers."""
+    assert refusal_detected("The warranty does not include consumable parts such as filters.")

@@ -3,7 +3,7 @@
 A QA gate that tests, scores and gates **HomeMate**, a small local LLM smart-home assistant, before each release.
 The full design is in [docs/PROJECT_REPORT.md](docs/PROJECT_REPORT.md).
 
-> Status: Phase 2 (golden dataset and deterministic scoring) built. Results tables are added only after real runs.
+> Status: Phase 2.1 (golden set scoring fixes) done. Golden set v1.0 awaits the author's freeze. Results tables are added only after real runs.
 
 ## Setup (Windows, Python 3.11)
 
@@ -61,3 +61,6 @@ Checks `data/golden_set.yaml` (report 6.2.4) and prints the dataset hash. Varian
 | 2026-11-03 | The shared tool-format text in the prompt has one tool-call example and one answer example. | Without them the model sometimes wrote a tool call inside an answer's text, so no tool ran. The R1–R8 rules are unchanged, and the text is the same for every version. |
 | 2026-11-03 | Forbidden claims for unanswerable cases are affirmative or value-only, for example `"yes, it works with Alexa"` instead of the report example's `"works with Alexa"` (G-UNA-001, 6.2.3). | M3 matches phrases and cannot see negation, so a correct refusal that repeats the question ("I don't know if it is compatible with Alexa") scored M3 = 0. A unit test now wraps every unanswerable question in a refusal and requires M3 = 1. Approved by the author. |
 | 2026-11-03 | Report section 6.2.3 updated: the G-UNA-001 example now uses the affirmative forbidden claims, and a short note explains the rule for unanswerable cases. | Keeps the report, the source of truth, consistent with `data/golden_set.yaml`. Requested by the author. |
+| 2026-11-03 | Phase 2.1 golden-set fixes from an independent review: forbidden claims for G-FAC-003, 009, 010, 012, 018, 020 and G-MHP-002; required facts for G-FAC-003, 007, 017 and G-MHP-006; reference answer for G-MHP-006. | Some forbidden claims were things a correct answer could legitimately say (for example "15 litres", which is the purifier's hourly output). Some required facts were too narrow. Requested by the author. |
+| 2026-11-03 | M4 refusal list widened with generic English variants ("i do not have", "does not contain", "does not provide", "does not include", "no details", "not provided", "not available in", "could not find", "no mention" and others). | Increases refusal recall. The phrases were chosen from general wording, not from model outputs. Known limit: "does not include" also matches legitimate answers, such as one about warranty exclusions; a unit test documents this. Requested by the author. |
+| 2026-11-03 | The validator prints a WARNING (not an error) for every forbidden claim that appears in the knowledge base, matched the same way as M3. | Lets the author review forbidden claims a correct answer might legitimately repeat. Requested by the author. |

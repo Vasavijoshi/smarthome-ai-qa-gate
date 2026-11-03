@@ -46,6 +46,18 @@ REFUSAL_PHRASES = [
     "not able to find",
     "unable to find",
     "not specified",
+    # Phase 2.1: generic English variants, chosen from general wording, not from model outputs.
+    "i do not have",
+    "does not contain",
+    "do not contain",
+    "does not provide",
+    "do not provide",
+    "does not include",
+    "no details",
+    "not provided",
+    "not available in",
+    "could not find",
+    "no mention",
 ]
 
 
@@ -84,10 +96,15 @@ def normalise(text: str) -> str:
     return " ".join(text.split())
 
 
+def phrase_in_normalised(normalised_text: str, phrase: str) -> bool:
+    """True if the normalised phrase appears in already-normalised text as whole words."""
+    target = normalise(phrase)
+    return bool(target) and re.search(rf"(?<![\w.]){re.escape(target)}(?![\w])", normalised_text) is not None
+
+
 def contains_phrase(text: str, phrase: str) -> bool:
     """True if the normalised phrase appears in the normalised text as whole words."""
-    target = normalise(phrase)
-    return bool(target) and re.search(rf"(?<![\w.]){re.escape(target)}(?![\w])", normalise(text)) is not None
+    return phrase_in_normalised(normalise(text), phrase)
 
 
 def fact_found(fact: str, answer: str) -> bool:

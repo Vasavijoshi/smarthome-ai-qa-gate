@@ -366,7 +366,7 @@ A **smoke subset** of 20 cases is flagged for fast runs: 8 factual, 3 multi-hop,
   absent_terms: ["Alexa"]
 ```
 
-For unanswerable cases, forbidden claims are written as affirmative statements ("yes, ...") or as values. The forbidden-claim check (M3) matches phrases and cannot see negation, so a phrase such as "compatible with Alexa" would also match a correct refusal that repeats the question ("I don't know if it is compatible with Alexa"). This change was made during Phase 2 and is recorded in the README deviations log.
+For unanswerable cases, forbidden claims are written as affirmative statements ("yes, ...") or as values. The forbidden-claim check (M3) matches phrases and cannot see negation, so a phrase such as "compatible with Alexa" would also match a correct refusal that repeats the question ("I don't know if it is compatible with Alexa"). This change was made during Phase 2 and is recorded in the README deviations log. More generally, a forbidden claim must never be something a correct answer could legitimately say, because M3 matches whole phrases and cannot see context.
 
 #### 6.2.4 Automatic dataset validation
 

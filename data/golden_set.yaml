@@ -33,8 +33,8 @@
   product: vayu_f1_fan
   question: "What does Sleep mode do on the Vayu F1?"
   reference_answer: "Sleep mode lowers the speed by one level every hour until it reaches speed 1, and then holds speed 1."
-  required_facts: ["every hour", "speed 1"]
-  forbidden_claims: ["switches the fan off"]
+  required_facts: ["every hour or each hour or hourly or per hour", "speed 1"]
+  forbidden_claims: ["switches the fan off completely", "raises the speed"]
   expected_behavior: answer
   source_chunks: ["vayu_f1_fan#modes"]
   smoke: true
@@ -81,7 +81,7 @@
   product: kavach_l1_lock
   question: "Which batteries go into the Kavach L1 smart lock?"
   reference_answer: "Four AA alkaline batteries in the indoor unit."
-  required_facts: ["4 AA"]
+  required_facts: ["4 AA or 4 x AA"]
   forbidden_claims: ["CR2032", "rechargeable battery"]
   expected_behavior: answer
   source_chunks: ["kavach_l1_lock#battery"]
@@ -106,7 +106,7 @@
   question: "How big is the storage tank of the Jal P2 water purifier?"
   reference_answer: "It has a 7-litre storage tank."
   required_facts: ["7 litres"]
-  forbidden_claims: ["10 litres", "15 litres"]
+  forbidden_claims: ["10 litre tank", "15 litre tank", "5 litre tank"]
   expected_behavior: answer
   source_chunks: ["jal_p2_purifier#overview"]
   smoke: true
@@ -118,7 +118,7 @@
   question: "What does error code E3 mean on the Jal P2?"
   reference_answer: "E3 means the UV lamp has failed. The purifier stops dispensing water until a technician replaces the lamp."
   required_facts: ["UV lamp"]
-  forbidden_claims: ["leak", "low pressure"]
+  forbidden_claims: ["e3 means a leak", "e3 means low pressure", "e3 means low water pressure"]
   expected_behavior: answer
   source_chunks: ["jal_p2_purifier#error_codes"]
   smoke: true
@@ -142,7 +142,7 @@
   question: "How long is the warranty on the Kavach L1 lock?"
   reference_answer: "The Kavach L1 smart lock has a 1-year warranty."
   required_facts: ["1 years or 12 months"]
-  forbidden_claims: ["2 years", "5 years"]
+  forbidden_claims: ["2 years", "3 years"]
   expected_behavior: answer
   source_chunks: ["warranty_service_policy#warranty_periods"]
   smoke: false
@@ -203,7 +203,7 @@
   product: kavach_l1_lock
   question: "Kavach lock mein kaunsi battery lagti hai?"
   reference_answer: "Four AA alkaline batteries in the indoor unit."
-  required_facts: ["4 AA"]
+  required_facts: ["4 AA or 4 x AA"]
   forbidden_claims: ["CR2032", "rechargeable battery"]
   expected_behavior: answer
   source_chunks: ["kavach_l1_lock#battery"]
@@ -217,7 +217,7 @@
   question: "jal p2 showing E3, wat does it mean??"
   reference_answer: "E3 means the UV lamp has failed. The purifier stops dispensing water until a technician replaces the lamp."
   required_facts: ["UV lamp"]
-  forbidden_claims: ["leak", "low pressure"]
+  forbidden_claims: ["e3 means a leak", "e3 means low pressure", "e3 means low water pressure"]
   expected_behavior: answer
   source_chunks: ["jal_p2_purifier#error_codes"]
   smoke: false
@@ -243,7 +243,7 @@
   question: "warrenty on the kavach lock??"
   reference_answer: "The Kavach L1 smart lock has a 1-year warranty."
   required_facts: ["1 years or 12 months"]
-  forbidden_claims: ["2 years", "5 years"]
+  forbidden_claims: ["2 years", "3 years"]
   expected_behavior: answer
   source_chunks: ["warranty_service_policy#warranty_periods"]
   smoke: false
@@ -269,7 +269,7 @@
   question: "If I run the Vayu F1 at its slowest running speed, about how much power does it use?"
   reference_answer: "The slowest running speed is speed 1, which uses about 6 watts."
   required_facts: ["6 watts"]
-  forbidden_claims: ["32 watts"]
+  forbidden_claims: ["32 watts at speed 1", "32 watts at the slowest speed"]
   expected_behavior: answer
   source_chunks: ["vayu_f1_fan#speed_settings", "vayu_f1_fan#overview"]
   smoke: true
@@ -315,8 +315,8 @@
   difficulty: medium
   product: warranty_service_policy
   question: "Can I buy an extended warranty for the Kavach L1, and how long is its standard warranty?"
-  reference_answer: "No. Extended warranty plans are only for the fan, the grinder and the purifier. The lock's standard warranty is 1 year."
-  required_facts: ["1 years or 12 months", "not available or only for the fan or can not"]
+  reference_answer: "The policy lists extended warranty plans for the fan, the grinder and the purifier, so the lock is not included. The lock's standard warranty is 1 year."
+  required_facts: ["1 years or 12 months", "not available or only for the fan or not included or not listed"]
   forbidden_claims: ["extended warranty is available for the lock"]
   expected_behavior: answer
   source_chunks: ["warranty_service_policy#charges_outside_warranty", "warranty_service_policy#warranty_periods"]

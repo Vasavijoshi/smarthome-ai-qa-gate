@@ -4,8 +4,8 @@ import copy
 
 import pytest
 
-from qa_gate.datasets.loader import load_raw
-from qa_gate.datasets.validator import dataset_hash, validate
+from qa_gate.datasets.loader import GoldenCase, load_raw
+from qa_gate.datasets.validator import dataset_hash, forbidden_claim_warnings, validate, warnings
 
 pytestmark = pytest.mark.unit
 
@@ -87,3 +87,33 @@ def test_hash_ignores_key_order_but_not_content():
     assert dataset_hash(edited(lambda cases: by_id(cases, "G-FAC-004").update(question="x"))) != dataset_hash(
         RAW
     )
+
+
+KB_TEXT = "The large jar holds 1.5 litres. Use one CR2032 coin cell. The fan has a 2-year warranty."
+
+
+def case_with_claims(claims: list[str]) -> GoldenCase:
+    """A valid answerable case with the given forbidden claims."""
+    return GoldenCase.model_validate({**by_id(RAW, "G-FAC-004"), "forbidden_claims": claims})
+
+
+@pytest.mark.parametrize(
+    "claim",
+    ["CR2032", "1.5 litres", "1.5 liters", "2 years", "large jar holds 1.5 litres"],
+)
+def test_forbidden_claim_in_kb_gives_warning(claim):
+    assert len(forbidden_claim_warnings([case_with_claims([claim])], KB_TEXT)) == 1
+
+
+@pytest.mark.parametrize(
+    "claim",
+    ["AAA", "15 litres", "2 years warranty on the lock", "induction motor", "CR2025"],
+)
+def test_forbidden_claim_not_in_kb_gives_no_warning(claim):
+    assert forbidden_claim_warnings([case_with_claims([claim])], KB_TEXT) == []
+
+
+def test_warnings_never_become_errors():
+    with_trap = edited(lambda cases: by_id(cases, "G-FAC-004").update(forbidden_claims=["BLDC"]))
+    assert validate(with_trap) == []
+    assert any("G-FAC-004" in w for w in warnings(with_trap))

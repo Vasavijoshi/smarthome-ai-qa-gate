@@ -12,6 +12,7 @@ from pathlib import Path
 from pydantic import ValidationError
 
 from qa_gate.datasets.loader import REPO_ROOT, GoldenCase, load_raw
+from qa_gate.metrics.deterministic import normalise, phrase_in_normalised
 
 # The framework reads the manuals as files; it never imports assistant code.
 KB_DIR = REPO_ROOT / "assistant" / "knowledge_base"
@@ -144,6 +145,25 @@ def validate(raw_cases: list[dict], kb_dir: Path = KB_DIR) -> list[str]:
     )
 
 
+def forbidden_claim_warnings(cases: list[GoldenCase], kb_text: str) -> list[str]:
+    """Forbidden claims that appear in the manuals (matched like M3), for the author to review."""
+    normalised_kb = normalise(kb_text)
+    return [
+        f"{c.id}: forbidden claim '{claim}' appears in the knowledge base"
+        for c in cases
+        for claim in c.forbidden_claims
+        if phrase_in_normalised(normalised_kb, claim)
+    ]
+
+
+def warnings(raw_cases: list[dict], kb_dir: Path = KB_DIR) -> list[str]:
+    """Return review warnings; these never fail validation."""
+    cases, errors = parse_cases(raw_cases)
+    if errors:
+        return []
+    return forbidden_claim_warnings(cases, read_kb(kb_dir)[1])
+
+
 def dataset_hash(raw_cases: list[dict]) -> str:
     """SHA-256 of the cases in canonical JSON, so formatting and comments do not change it."""
     canonical = json.dumps(raw_cases, sort_keys=True, ensure_ascii=False)
@@ -154,9 +174,15 @@ def main() -> int:
     """Validate data/golden_set.yaml, print the result and return an exit code."""
     raw = load_raw()
     errors = validate(raw)
+    review = warnings(raw)
     for error in errors:
         print(f"ERROR {error}")
-    print(f"{len(raw)} golden cases, {len(errors)} errors, dataset hash {dataset_hash(raw)[:12]}")
+    for warning in review:
+        print(f"WARNING {warning}")
+    print(
+        f"{len(raw)} golden cases, {len(errors)} errors, {len(review)} warnings, "
+        f"dataset hash {dataset_hash(raw)[:12]}"
+    )
     return 1 if errors else 0
 
 
