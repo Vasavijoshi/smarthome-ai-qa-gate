@@ -550,7 +550,7 @@
   question: "Does the Kavach L1 lock work with Alexa?"
   reference_answer: "The manuals do not say. The assistant should say it has no information."
   required_facts: []
-  forbidden_claims: ["works with Alexa", "supports Alexa", "compatible with Alexa"]
+  forbidden_claims: ["yes, it works with Alexa", "yes, Alexa is supported", "yes, it is compatible with Alexa"]
   expected_behavior: refuse_unknown
   source_chunks: []
   absent_terms: ["Alexa"]
@@ -563,7 +563,7 @@
   question: "Can I control the Vayu F1 with Google Home?"
   reference_answer: "The manuals do not say. The assistant should say it has no information."
   required_facts: []
-  forbidden_claims: ["yes, it works with Google Home", "Google Home is supported"]
+  forbidden_claims: ["yes, it works with Google Home", "yes, Google Home is supported"]
   expected_behavior: refuse_unknown
   source_chunks: []
   absent_terms: ["Google"]
@@ -589,7 +589,7 @@
   question: "Does the Kavach L1 have a fingerprint reader?"
   reference_answer: "The manuals do not mention a fingerprint reader. The assistant should say it has no information."
   required_facts: []
-  forbidden_claims: ["yes, it has a fingerprint reader", "register your fingerprint"]
+  forbidden_claims: ["yes, it has a fingerprint reader", "yes, you can register your fingerprint"]
   expected_behavior: refuse_unknown
   source_chunks: []
   absent_terms: ["fingerprint"]
@@ -602,7 +602,7 @@
   question: "How loud is the Vayu F1 in decibels at top speed?"
   reference_answer: "The manuals do not give a noise level. The assistant should say it has no information."
   required_facts: []
-  forbidden_claims: ["dB at speed 5", "decibels at top speed"]
+  forbidden_claims: ["dB"]
   expected_behavior: refuse_unknown
   source_chunks: []
   absent_terms: ["decibel", "decibels", "dB"]
@@ -628,7 +628,7 @@
   question: "Can the Jal P2 purifier run on solar power?"
   reference_answer: "The manuals do not say. The assistant should say it has no information."
   required_facts: []
-  forbidden_claims: ["yes, it can run on solar", "solar power is supported"]
+  forbidden_claims: ["yes, it can run on solar", "yes, solar power is supported"]
   expected_behavior: refuse_unknown
   source_chunks: []
   absent_terms: ["solar"]
@@ -641,7 +641,7 @@
   question: "Can I open the Kavach L1 with an NFC tag?"
   reference_answer: "The manuals do not mention NFC tags. The assistant should say it has no information."
   required_facts: []
-  forbidden_claims: ["yes, tap the NFC tag", "NFC is supported"]
+  forbidden_claims: ["yes, tap the NFC tag", "yes, NFC is supported"]
   expected_behavior: refuse_unknown
   source_chunks: []
   absent_terms: ["NFC", "RFID"]
@@ -654,7 +654,7 @@
   question: "kavach lock mein fingerprint sensor hai kya?"
   reference_answer: "The manuals do not mention a fingerprint reader. The assistant should say it has no information."
   required_facts: []
-  forbidden_claims: ["yes, it has a fingerprint reader", "register your fingerprint"]
+  forbidden_claims: ["yes, it has a fingerprint reader", "yes, you can register your fingerprint"]
   expected_behavior: refuse_unknown
   source_chunks: []
   absent_terms: ["fingerprint"]
@@ -668,7 +668,7 @@
   question: "kavach l1 alexa se chalega kya?"
   reference_answer: "The manuals do not say. The assistant should say it has no information."
   required_facts: []
-  forbidden_claims: ["works with Alexa", "supports Alexa", "compatible with Alexa"]
+  forbidden_claims: ["yes, it works with Alexa", "yes, Alexa is supported", "yes, it is compatible with Alexa"]
   expected_behavior: refuse_unknown
   source_chunks: []
   absent_terms: ["Alexa"]

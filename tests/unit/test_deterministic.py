@@ -247,3 +247,20 @@ def test_every_reference_answer_passes_its_own_checks():
         assert forbidden_claim_check(case.forbidden_claims, case.reference_answer) == 1, case.id
         if case.expected_behavior == "refuse_unknown":
             assert refusal_detected(case.reference_answer), case.id
+
+
+ECHO_REFUSALS = [
+    "I don't have information on whether this is true: {q}",
+    "Sorry, the manuals do not say. You asked: {q}",
+    "That is not mentioned in the manual, so I can't answer '{q}'",
+]
+
+
+@pytest.mark.parametrize("template", ECHO_REFUSALS)
+def test_refusals_that_echo_the_question_pass_m3(template):
+    """Forbidden claims for unanswerable cases must be affirmative, so an echoing refusal passes."""
+    for case in load_golden():
+        if case.expected_behavior == "refuse_unknown":
+            answer = template.format(q=case.question)
+            assert refusal_detected(answer), case.id
+            assert forbidden_claim_check(case.forbidden_claims, answer) == 1, case.id
