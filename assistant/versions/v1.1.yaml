@@ -1,0 +1,10 @@
+# Harmless improvement: friendlier wording of the same rules.
+version: "v1.1"
+prompt_file: v1.1.txt
+retrieval:
+  top_k: 3
+  max_chunk_words: 200
+  overlap_words: 40
+validation:
+  server_side_args: true
+  unlock_confirmation: true

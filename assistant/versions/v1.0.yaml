@@ -1,0 +1,10 @@
+# Baseline: all rules and checks on.
+version: "v1.0"
+prompt_file: v1.0.txt
+retrieval:
+  top_k: 3
+  max_chunk_words: 200
+  overlap_words: 40
+validation:
+  server_side_args: true
+  unlock_confirmation: true

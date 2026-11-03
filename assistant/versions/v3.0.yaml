@@ -1,0 +1,10 @@
+# Retrieval regression (F1): k = 1 and chunks up to 400 words.
+version: "v3.0"
+prompt_file: v3.0.txt
+retrieval:
+  top_k: 1
+  max_chunk_words: 400
+  overlap_words: 40
+validation:
+  server_side_args: true
+  unlock_confirmation: true

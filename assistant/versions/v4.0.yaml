@@ -1,0 +1,10 @@
+# Guardrail and tool regression (F3, F4): R4 and R5 removed, validation and unlock confirmation off.
+version: "v4.0"
+prompt_file: v4.0.txt
+retrieval:
+  top_k: 3
+  max_chunk_words: 200
+  overlap_words: 40
+validation:
+  server_side_args: false
+  unlock_confirmation: false

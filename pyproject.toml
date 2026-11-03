@@ -1,0 +1,25 @@
+[project]
+name = "smarthome-ai-qa-gate"
+version = "0.1.0"
+description = "A QA gate that tests, scores and gates a small LLM smart-home assistant."
+requires-python = ">=3.11,<3.12"
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]
+markers = [
+    "unit: fast tests of single functions",
+    "contract: API and tool-layer tests against the in-process app",
+    "golden: golden-set evaluation against a live model",
+    "safety: safety-suite evaluation against a live model",
+    "tools: tool-call evaluation against a live model",
+    "multiturn: multi-turn scenario evaluation against a live model",
+    "smoke: fast subset of the evaluation suites",
+]
+
+[tool.ruff]
+line-length = 110
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP"]

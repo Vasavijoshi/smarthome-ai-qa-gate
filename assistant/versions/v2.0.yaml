@@ -1,0 +1,10 @@
+# Prompt regression (F2): grounding rule R2 removed.
+version: "v2.0"
+prompt_file: v2.0.txt
+retrieval:
+  top_k: 3
+  max_chunk_words: 200
+  overlap_words: 40
+validation:
+  server_side_args: true
+  unlock_confirmation: true

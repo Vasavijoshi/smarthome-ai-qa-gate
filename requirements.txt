@@ -1,0 +1,14 @@
+# Python 3.11. Versions are pinned; re-pin only in its own commit.
+# Install CPU-only torch first to avoid the large CUDA build:
+#   pip install torch==2.15.0 --index-url https://download.pytorch.org/whl/cpu
+fastapi==0.162.0
+uvicorn==0.54.0
+pydantic==2.14.2
+httpx==0.28.1
+PyYAML==6.0.3
+numpy==2.4.6
+scikit-learn==1.9.1
+sentence-transformers==6.2.0
+torch==2.15.0
+pytest==9.2.0
+ruff==0.17.3
