@@ -240,6 +240,8 @@ Each `/chat` call follows the same steps:
 
 If the model returns invalid JSON, the call is retried once. A second failure is returned as an `invalid_response` error and counted by the response-validity metric.
 
+*Implementation note (README deviations log):* each model call is capped at 400 completion tokens (`num_predict`), because in JSON mode `llama3.2:3b` once generated more than 2,600 tokens without stopping; the cap turns such a runaway into invalid JSON, handled by the retry rule above. The shared tool-format text in the prompt (the same for every version, outside rules R1 to R8) contains one tool-call example and one answer example, because without them the model sometimes wrote a tool call inside an answer.
+
 #### 6.1.5 Devices and tools
 
 | Device id | Type | State fields |
@@ -308,6 +310,8 @@ The golden dataset is 60 hand-reviewed cases, written from the manuals only, wit
 4. **Traceable.** Every answerable case names the chunk ids that contain the answer.
 5. **Human reviewed.** Claude Code may draft candidate questions, but the author checks every reference answer and fact against the manual. Nothing is accepted unread.
 6. **Frozen.** Dataset v1.0 is frozen before the first full run. Later changes happen only through the promotion process (6.10) and create a new version.
+
+*Implementation note (README deviations log):* before the freeze, two review rounds (Phase 2.1 and 2.1b) rewrote some forbidden claims and widened some required facts so that no forbidden claim is something a correct answer could say. Dataset v1.0 was then frozen at hash `5d0396e9dc0590a4db3e3bd646fe01be54ef5bc2edeaf66959e11223ceb86a24` (commit `6e5bbca`); `eval.yaml` holds the hash, and a unit test and the evaluation refuse to run on any other.
 
 #### 6.2.2 Composition
 
@@ -381,6 +385,8 @@ The dataset validator runs in CI and before every evaluation. It fails on any of
 
 The validator also computes a **dataset hash**. It is stored with every run, and the gate refuses to compare runs that have different hashes.
 
+*Implementation note (README deviations log):* the validator also prints a warning, never an error, for every forbidden claim that appears in the knowledge base, matched the same way as M3, so the author can review claims a correct answer might repeat. The frozen v1.0 set has 0 warnings.
+
 ### 6.3 Evaluation methodology
 
 Every answer is scored in layers, cheapest and most reliable first, and the LLM judge is used only where meaning must be understood.
@@ -410,6 +416,8 @@ Every answer is scored in layers, cheapest and most reliable first, and the LLM 
 | M10 | Latency and tokens | Milliseconds and token counts from the response metadata | recorded, not a pass rule | 0 |
 | M11 | Stability | Share of the three repeats that agree with the majority on the deterministic checks | reported, flaky below 0.67 | derived |
 
+*Implementation note (README deviations log):* the M4 phrase list has 30 entries: the original 20 plus generic English variants added in Phase 2.1 ("i do not have", "does not contain", "no mention" and others), chosen from general wording, not from model outputs. "does not include" was removed again in Phase 2.1b because legitimate answers about warranty exclusions use it.
+
 The **cost proxy** is tokens multiplied by a reference price per 1,000 tokens that is set in the configuration file. Local models are free, so this number is illustrative. It exists to show how cost would be tracked, not what it would be.
 
 #### 6.3.3 Per-case pass rules
@@ -436,6 +444,8 @@ The word "hallucination" is turned into three counted quantities, all over the 6
 
 The two parts are always reported separately as well, because they have different causes and different fixes. A **false-refusal rate** (answerable questions wrongly refused) is tracked next to them so that a version cannot look safe simply by refusing everything.
 
+*Implementation note (README deviations log):* "a forbidden claim is present" and "no refusal is detected" are decided by a majority of the three repeats, matching the 2-of-3 rule in 6.3.5. The false-refusal rate counts answerable cases (`answer` and `correct_premise`) where M4 detects a refusal in at least 2 of 3 repeats.
+
 #### 6.3.5 Handling non-determinism
 
 - Every case is run **three times** with temperature 0.3 and fixed seeds 11, 22 and 33.
@@ -445,11 +455,15 @@ The two parts are always reported separately as well, because they have differen
 - Cases with stability below 0.67 are listed as **flaky**. They stay in the gate, and the flaky list is reported. With three repeats, stability is either 1.0 or 0.67 (2 of 3 agree), so in practice a case is flaky when its three repeats do not all agree (decided in Phase 3, see the README deviations log).
 - The judge runs at temperature 0 with a fixed seed. A **judge stability test** re-judges 10 random cases three times and reports the spread of scores.
 
+*Implementation note (README deviations log):* an evaluation runs in two passes. The pytest suite (`-m golden`) makes all assistant calls and applies layers 0 and 1; then `python -m qa_gate.metrics.judge` judges repeat 1 (stored as `repeat_idx` 0, seed 11) in one batch, because on a CPU Ollama swaps the 3B and 7B models every time it switches between them. Case pass/fail is computed in SQL views. Thresholds, seeds and judge settings live in `eval.yaml`, with a switch `judge.scope: full | sampled`; sampled judging covers the 20 smoke cases plus 10 non-smoke cases drawn with a fixed `sample_seed` (risk table 10.2). Rule fixed before any full run: use `full`; if a full golden run takes more than 4 hours end to end, switch every later run to `sampled` and compare earlier full runs on the same 30 cases only. The Phase 3 exit run took 2 h 27 min, so judging stays `full`.
+
 #### 6.3.6 Judge setup
 
 - The assistant is `llama3.2:3b`. The judge is `qwen2.5:7b`, a different model family, to reduce self-preference bias.
 - DeepEval is connected to Ollama through a small custom model class, so no paid API is needed. DeepEval's telemetry and cloud features are switched off (check the exact setting name in the installed version's documentation).
 - The rubric text for each `GEval` metric is a versioned file in the repository, so a rubric change is a visible, reviewable change.
+
+*Implementation note (README deviations log):* DeepEval is pinned at 4.3.2. Telemetry is switched off with `DEEPEVAL_TELEMETRY_OPT_OUT=1` and `.env` loading with `DEEPEVAL_DISABLE_DOTENV=1`, both set before DeepEval is imported. DeepEval 4.3.2 requires `click<8.4`, so `huggingface-hub` is pinned to 1.16.1 and `transformers` to 5.17.0; embedding scores were checked and are unchanged.
 
 #### 6.3.7 Judge calibration
 
@@ -659,6 +673,8 @@ GROUP BY r.run_id;
 ```
 
 SQLite has no percentile function, so p50 and p95 latency are computed by sorting the latency column in SQL and picking the row at the right offset.
+
+*Implementation note (README deviations log):* the schema adds `runs.judge_scope` (so full and sampled runs are never compared), `runs.status` (the 6.6.2 valid or invalid verdict), `results.eval_ms` (per-case time including judging), `results.retrieved_json` (the context the judge scores against), a `golden_cases` table (category, difficulty and whether the case was judged) and a helper view `v_golden_cases` that applies the 6.3.3 and 6.3.5 pass rules. The judge command re-stamps `runs.finished_at` after judging; in the Phase 3 exit run it marks the end of the assistant pass only, and the full time is in `results.eval_ms`.
 
 #### 6.6.2 Post-run data validation
 
