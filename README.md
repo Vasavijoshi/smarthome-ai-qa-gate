@@ -3,7 +3,7 @@
 A QA gate that tests, scores and gates **HomeMate**, a small local LLM smart-home assistant, before each release.
 The full design is in [docs/PROJECT_REPORT.md](docs/PROJECT_REPORT.md).
 
-> Status: Phase 1 (HomeMate) built. Results tables are added only after real runs.
+> Status: Phase 2 (golden dataset and deterministic scoring) built. Results tables are added only after real runs.
 
 ## Setup (Windows, Python 3.11)
 
@@ -36,6 +36,14 @@ $env:ASSISTANT_VERSION="v1.0"; $env:ENABLE_TEST_ADMIN="1"; .venv\Scripts\python 
 | `ENABLE_TEST_ADMIN` | `0` | `1` turns on `POST /admin/reset` |
 
 API docs: http://localhost:8000/docs
+
+## Dataset validation
+
+```bash
+.venv/Scripts/python -m qa_gate.datasets.validator
+```
+
+Checks `data/golden_set.yaml` (report 6.2.4) and prints the dataset hash. Variants carry a `variant_of:<id>` tag.
 
 ## Tests
 

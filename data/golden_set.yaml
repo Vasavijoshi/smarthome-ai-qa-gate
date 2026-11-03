@@ -1,0 +1,751 @@
+# Golden dataset v1.0 (report section 6.2). Written from the frozen manuals (kb_version 1.0).
+# DRAFT by Claude Code: the author must check every reference answer and fact against the manual.
+# A fact may list alternatives separated by " or ". Variants are tagged "variant_of:<id>".
+
+# ---------------- Factual (20) ----------------
+- id: G-FAC-001
+  category: factual
+  difficulty: easy
+  product: vayu_f1_fan
+  question: "How many speed levels does the Vayu F1 fan have?"
+  reference_answer: "Six speed levels, numbered 0 to 5. Speed 0 is off and speed 5 is the fastest."
+  required_facts: ["0 to 5 or 6 speed levels or 6 levels"]
+  forbidden_claims: ["7 speed levels", "10 speed levels"]
+  expected_behavior: answer
+  source_chunks: ["vayu_f1_fan#speed_settings"]
+  smoke: true
+
+- id: G-FAC-002
+  category: factual
+  difficulty: easy
+  product: vayu_f1_fan
+  question: "What battery does the Vayu F1 remote control use?"
+  reference_answer: "One CR2032 coin cell."
+  required_facts: ["CR2032"]
+  forbidden_claims: ["AAA", "rechargeable"]
+  expected_behavior: answer
+  source_chunks: ["vayu_f1_fan#remote_control"]
+  smoke: true
+
+- id: G-FAC-003
+  category: factual
+  difficulty: medium
+  product: vayu_f1_fan
+  question: "What does Sleep mode do on the Vayu F1?"
+  reference_answer: "Sleep mode lowers the speed by one level every hour until it reaches speed 1, and then holds speed 1."
+  required_facts: ["every hour", "speed 1"]
+  forbidden_claims: ["switches the fan off"]
+  expected_behavior: answer
+  source_chunks: ["vayu_f1_fan#modes"]
+  smoke: true
+
+- id: G-FAC-004
+  category: factual
+  difficulty: easy
+  product: vayu_f1_fan
+  question: "What type of motor does the Vayu F1 ceiling fan use?"
+  reference_answer: "A brushless DC (BLDC) motor."
+  required_facts: ["BLDC or brushless"]
+  forbidden_claims: ["induction motor"]
+  expected_behavior: answer
+  source_chunks: ["vayu_f1_fan#overview"]
+  smoke: false
+
+- id: G-FAC-005
+  category: factual
+  difficulty: easy
+  product: kavach_l1_lock
+  question: "How many PIN codes can the Kavach L1 lock store?"
+  reference_answer: "Up to 20 PIN codes."
+  required_facts: ["20"]
+  forbidden_claims: ["10 PIN codes", "unlimited"]
+  expected_behavior: answer
+  source_chunks: ["kavach_l1_lock#pin_codes"]
+  smoke: true
+
+- id: G-FAC-006
+  category: factual
+  difficulty: easy
+  product: kavach_l1_lock
+  question: "How many digits does a Kavach L1 PIN need?"
+  reference_answer: "A PIN must have 6 to 8 digits."
+  required_facts: ["6 to 8"]
+  forbidden_claims: ["4 digits"]
+  expected_behavior: answer
+  source_chunks: ["kavach_l1_lock#pin_codes"]
+  smoke: false
+
+- id: G-FAC-007
+  category: factual
+  difficulty: easy
+  product: kavach_l1_lock
+  question: "Which batteries go into the Kavach L1 smart lock?"
+  reference_answer: "Four AA alkaline batteries in the indoor unit."
+  required_facts: ["4 AA"]
+  forbidden_claims: ["CR2032", "rechargeable battery"]
+  expected_behavior: answer
+  source_chunks: ["kavach_l1_lock#battery"]
+  smoke: true
+
+- id: G-FAC-008
+  category: factual
+  difficulty: easy
+  product: kavach_l1_lock
+  question: "What is the default auto-lock delay on the Kavach L1?"
+  reference_answer: "Auto-lock is on by default with a delay of 30 seconds."
+  required_facts: ["30 seconds"]
+  forbidden_claims: ["60 seconds"]
+  expected_behavior: answer
+  source_chunks: ["kavach_l1_lock#auto_lock"]
+  smoke: true
+
+- id: G-FAC-009
+  category: factual
+  difficulty: easy
+  product: jal_p2_purifier
+  question: "How big is the storage tank of the Jal P2 water purifier?"
+  reference_answer: "It has a 7-litre storage tank."
+  required_facts: ["7 litres"]
+  forbidden_claims: ["10 litres", "15 litres"]
+  expected_behavior: answer
+  source_chunks: ["jal_p2_purifier#overview"]
+  smoke: true
+
+- id: G-FAC-010
+  category: factual
+  difficulty: easy
+  product: jal_p2_purifier
+  question: "What does error code E3 mean on the Jal P2?"
+  reference_answer: "E3 means the UV lamp has failed. The purifier stops dispensing water until a technician replaces the lamp."
+  required_facts: ["UV lamp"]
+  forbidden_claims: ["leak", "low pressure"]
+  expected_behavior: answer
+  source_chunks: ["jal_p2_purifier#error_codes"]
+  smoke: true
+
+- id: G-FAC-011
+  category: factual
+  difficulty: easy
+  product: mixo_m3_grinder
+  question: "What is the capacity of the Mixo M3 chutney jar?"
+  reference_answer: "The chutney jar holds 0.4 litres."
+  required_facts: ["0.4 litres"]
+  forbidden_claims: ["1.5 litres"]
+  expected_behavior: answer
+  source_chunks: ["mixo_m3_grinder#jars"]
+  smoke: false
+
+- id: G-FAC-012
+  category: factual
+  difficulty: easy
+  product: warranty_service_policy
+  question: "How long is the warranty on the Kavach L1 lock?"
+  reference_answer: "The Kavach L1 smart lock has a 1-year warranty."
+  required_facts: ["1 years or 12 months"]
+  forbidden_claims: ["2 years", "5 years"]
+  expected_behavior: answer
+  source_chunks: ["warranty_service_policy#warranty_periods"]
+  smoke: false
+
+- id: G-FAC-013
+  category: factual
+  difficulty: medium
+  product: warranty_service_policy
+  question: "How do I raise a service request for my product?"
+  reference_answer: "In the HomeMate app, open the Support page, choose Raise a service request, select the product, describe the problem and upload a photo of the invoice. The web form at service.homemate.test also works."
+  required_facts: ["Support or service.homemate.test", "invoice"]
+  forbidden_claims: ["call the toll-free number"]
+  expected_behavior: answer
+  source_chunks: ["warranty_service_policy#how_to_raise_a_service_request"]
+  smoke: false
+
+- id: G-FAC-014
+  category: factual
+  difficulty: hard
+  product: kavach_l1_lock
+  question: "If I type extra random digits around my Kavach L1 PIN to hide it, will the lock still open, and how many digits can I type in total?"
+  reference_answer: "Yes. The lock still opens if the real PIN is inside the digits typed, up to 16 digits in total."
+  required_facts: ["16"]
+  forbidden_claims: ["will not open"]
+  expected_behavior: answer
+  source_chunks: ["kavach_l1_lock#pin_codes"]
+  smoke: false
+
+- id: G-FAC-015
+  category: factual
+  difficulty: easy
+  product: vayu_f1_fan
+  question: "how many speeds vayu fan got"
+  reference_answer: "Six speed levels, numbered 0 to 5. Speed 0 is off and speed 5 is the fastest."
+  required_facts: ["0 to 5 or 6 speed levels or 6 levels or 6 speeds"]
+  forbidden_claims: ["7 speed levels", "10 speed levels"]
+  expected_behavior: answer
+  source_chunks: ["vayu_f1_fan#speed_settings"]
+  smoke: false
+  tags: ["variant_of:G-FAC-001", "informal"]
+
+- id: G-FAC-016
+  category: factual
+  difficulty: easy
+  product: vayu_f1_fan
+  question: "vayu f1 remote battery type pls"
+  reference_answer: "One CR2032 coin cell."
+  required_facts: ["CR2032"]
+  forbidden_claims: ["AAA", "rechargeable"]
+  expected_behavior: answer
+  source_chunks: ["vayu_f1_fan#remote_control"]
+  smoke: false
+  tags: ["variant_of:G-FAC-002", "short_form"]
+
+- id: G-FAC-017
+  category: factual
+  difficulty: medium
+  product: kavach_l1_lock
+  question: "Kavach lock mein kaunsi battery lagti hai?"
+  reference_answer: "Four AA alkaline batteries in the indoor unit."
+  required_facts: ["4 AA"]
+  forbidden_claims: ["CR2032", "rechargeable battery"]
+  expected_behavior: answer
+  source_chunks: ["kavach_l1_lock#battery"]
+  smoke: false
+  tags: ["variant_of:G-FAC-007", "hinglish"]
+
+- id: G-FAC-018
+  category: factual
+  difficulty: medium
+  product: jal_p2_purifier
+  question: "jal p2 showing E3, wat does it mean??"
+  reference_answer: "E3 means the UV lamp has failed. The purifier stops dispensing water until a technician replaces the lamp."
+  required_facts: ["UV lamp"]
+  forbidden_claims: ["leak", "low pressure"]
+  expected_behavior: answer
+  source_chunks: ["jal_p2_purifier#error_codes"]
+  smoke: false
+  tags: ["variant_of:G-FAC-010", "typos"]
+
+- id: G-FAC-019
+  category: factual
+  difficulty: medium
+  product: kavach_l1_lock
+  question: "auto lock dfault time on kavach l1?"
+  reference_answer: "Auto-lock is on by default with a delay of 30 seconds."
+  required_facts: ["30 seconds"]
+  forbidden_claims: ["60 seconds"]
+  expected_behavior: answer
+  source_chunks: ["kavach_l1_lock#auto_lock"]
+  smoke: false
+  tags: ["variant_of:G-FAC-008", "typos"]
+
+- id: G-FAC-020
+  category: factual
+  difficulty: medium
+  product: warranty_service_policy
+  question: "warrenty on the kavach lock??"
+  reference_answer: "The Kavach L1 smart lock has a 1-year warranty."
+  required_facts: ["1 years or 12 months"]
+  forbidden_claims: ["2 years", "5 years"]
+  expected_behavior: answer
+  source_chunks: ["warranty_service_policy#warranty_periods"]
+  smoke: false
+  tags: ["variant_of:G-FAC-012", "typos"]
+
+# ---------------- Multi-hop (8) ----------------
+- id: G-MHP-001
+  category: multi_hop
+  difficulty: medium
+  product: multiple
+  question: "Which has the longer motor warranty, the Vayu F1 fan or the Mixo M3 grinder?"
+  reference_answer: "Neither. Both have a 5-year warranty on the motor."
+  required_facts: ["5 years"]
+  forbidden_claims: ["fan has the longer", "grinder has the longer"]
+  expected_behavior: answer
+  source_chunks: ["warranty_service_policy#warranty_periods"]
+  smoke: true
+
+- id: G-MHP-002
+  category: multi_hop
+  difficulty: medium
+  product: vayu_f1_fan
+  question: "If I run the Vayu F1 at its slowest running speed, about how much power does it use?"
+  reference_answer: "The slowest running speed is speed 1, which uses about 6 watts."
+  required_facts: ["6 watts"]
+  forbidden_claims: ["32 watts"]
+  expected_behavior: answer
+  source_chunks: ["vayu_f1_fan#speed_settings", "vayu_f1_fan#overview"]
+  smoke: true
+
+- id: G-MHP-003
+  category: multi_hop
+  difficulty: hard
+  product: jal_p2_purifier
+  question: "I just replaced the filters in my Jal P2. What do I need to do before I drink the water?"
+  reference_answer: "Flush it by filling and draining the tank twice, throwing away the first two full tanks, and reset the filter life counter (Filter Reset in the app or by a technician)."
+  required_facts: ["2 tanks or 2 full tanks or twice", "reset"]
+  forbidden_claims: ["drink straight away"]
+  expected_behavior: answer
+  source_chunks: ["jal_p2_purifier#flushing", "jal_p2_purifier#filter_life"]
+  smoke: true
+
+- id: G-MHP-004
+  category: multi_hop
+  difficulty: hard
+  product: multiple
+  question: "Is the RO membrane of the Jal P2 covered by the warranty, and how often should it be replaced?"
+  reference_answer: "No. The RO membrane is a consumable and is not covered by the warranty. It should be replaced every 24 months, or earlier if the display asks."
+  required_facts: ["not covered or consumable", "24 months or 2 years"]
+  forbidden_claims: ["membrane is covered"]
+  expected_behavior: answer
+  source_chunks: ["warranty_service_policy#what_is_not_covered", "jal_p2_purifier#filter_life"]
+  smoke: false
+
+- id: G-MHP-005
+  category: multi_hop
+  difficulty: hard
+  product: kavach_l1_lock
+  question: "My Kavach L1 batteries are completely dead and I'm outside the house. How can I get in, and will that charge the batteries?"
+  reference_answer: "Use the mechanical backup key, or connect a USB-C power bank to the emergency port under the keypad and enter your PIN. The power bank does not charge the batteries."
+  required_facts: ["mechanical key or USB-C", "not charge"]
+  forbidden_claims: ["charges the batteries"]
+  expected_behavior: answer
+  source_chunks: ["kavach_l1_lock#battery", "kavach_l1_lock#locking_and_unlocking"]
+  smoke: false
+
+- id: G-MHP-006
+  category: multi_hop
+  difficulty: medium
+  product: warranty_service_policy
+  question: "Can I buy an extended warranty for the Kavach L1, and how long is its standard warranty?"
+  reference_answer: "No. Extended warranty plans are only for the fan, the grinder and the purifier. The lock's standard warranty is 1 year."
+  required_facts: ["1 years or 12 months", "not available or only for the fan or can not"]
+  forbidden_claims: ["extended warranty is available for the lock"]
+  expected_behavior: answer
+  source_chunks: ["warranty_service_policy#charges_outside_warranty", "warranty_service_policy#warranty_periods"]
+  smoke: false
+
+- id: G-MHP-007
+  category: multi_hop
+  difficulty: medium
+  product: multiple
+  question: "Who should install the Vayu F1, and would a wrong installation still be covered by the warranty?"
+  reference_answer: "A qualified electrician must install it. Damage caused by wrong installation is not covered by the warranty."
+  required_facts: ["electrician", "not covered"]
+  forbidden_claims: ["install it yourself"]
+  expected_behavior: answer
+  source_chunks: ["vayu_f1_fan#safety", "warranty_service_policy#what_is_not_covered"]
+  smoke: false
+
+- id: G-MHP-008
+  category: multi_hop
+  difficulty: hard
+  product: mixo_m3_grinder
+  question: "My Mixo M3 stopped suddenly while grinding a full jar of hard spices on speed 3. What happened, and how long should I wait before starting again?"
+  reference_answer: "The overload protector switched the motor off. Turn the knob to 0, unplug it, remove some contents, wait about 10 minutes for the motor to cool, press the red reset button under the base and restart at a low speed."
+  required_facts: ["overload", "10 minutes"]
+  forbidden_claims: ["motor is broken"]
+  expected_behavior: answer
+  source_chunks: ["mixo_m3_grinder#overload_protection", "mixo_m3_grinder#speed_knob"]
+  smoke: false
+
+# ---------------- Troubleshooting (8) ----------------
+- id: G-TRB-001
+  category: troubleshooting
+  difficulty: easy
+  product: vayu_f1_fan
+  question: "My Vayu F1 fan is making a humming sound. What should I check?"
+  reference_answer: "Check that it is connected to a normal wall switch and not to a dimmer switch, because a dimmer can damage the motor electronics."
+  required_facts: ["dimmer"]
+  forbidden_claims: ["oil the motor"]
+  expected_behavior: answer
+  source_chunks: ["vayu_f1_fan#troubleshooting"]
+  smoke: true
+
+- id: G-TRB-002
+  category: troubleshooting
+  difficulty: medium
+  product: jal_p2_purifier
+  question: "My Jal P2 shows E5. What does it mean and what should I do?"
+  reference_answer: "E5 means a leak was detected inside the unit and the inlet valve closes automatically. Switch the purifier off at the wall, close the inlet tap and do not use it until a technician has checked it."
+  required_facts: ["leak", "inlet tap or close the inlet"]
+  forbidden_claims: ["safe to keep using"]
+  expected_behavior: answer
+  source_chunks: ["jal_p2_purifier#error_codes"]
+  smoke: true
+
+- id: G-TRB-003
+  category: troubleshooting
+  difficulty: medium
+  product: vayu_f1_fan
+  question: "The Vayu F1 beeped three times and stopped. What should I do?"
+  reference_answer: "The motor detected an overload, for example a blocked blade. Switch it off at the wall, remove the obstruction, wait one minute and switch it on again."
+  required_facts: ["overload or blocked or obstruction", "1 minutes"]
+  forbidden_claims: ["replace the remote"]
+  expected_behavior: answer
+  source_chunks: ["vayu_f1_fan#troubleshooting"]
+  smoke: true
+
+- id: G-TRB-004
+  category: troubleshooting
+  difficulty: hard
+  product: kavach_l1_lock
+  question: "Auto-lock on my Kavach L1 is on, but the door does not relock. Why?"
+  reference_answer: "Auto-lock only works when the door is fully closed, because a magnetic door sensor checks it. Check the door is closed and the sensor and magnet are aligned; a gap of more than 10 mm stops auto-lock."
+  required_facts: ["closed", "sensor or magnet"]
+  forbidden_claims: ["replace the lock"]
+  expected_behavior: answer
+  source_chunks: ["kavach_l1_lock#troubleshooting", "kavach_l1_lock#auto_lock"]
+  smoke: false
+
+- id: G-TRB-005
+  category: troubleshooting
+  difficulty: medium
+  product: jal_p2_purifier
+  question: "My Jal P2 shows E4 right after I changed the filters. What went wrong?"
+  reference_answer: "The filter life counter was not reset. Use the Filter Reset option in the HomeMate app or ask the technician."
+  required_facts: ["reset"]
+  forbidden_claims: ["filters are faulty"]
+  expected_behavior: answer
+  source_chunks: ["jal_p2_purifier#troubleshooting", "jal_p2_purifier#filter_life"]
+  smoke: false
+
+- id: G-TRB-006
+  category: troubleshooting
+  difficulty: easy
+  product: mixo_m3_grinder
+  question: "My Mixo M3 jar is leaking from the bottom. What should I check?"
+  reference_answer: "Check that the rubber gasket under the blade assembly is seated correctly and is not cracked. Spare gaskets are available from service."
+  required_facts: ["gasket"]
+  forbidden_claims: ["dishwasher"]
+  expected_behavior: answer
+  source_chunks: ["mixo_m3_grinder#troubleshooting"]
+  smoke: false
+
+- id: G-TRB-007
+  category: troubleshooting
+  difficulty: hard
+  product: vayu_f1_fan
+  question: "I replaced the battery in my Vayu F1 remote but it still does not work. How do I pair it again?"
+  reference_answer: "Switch the fan off at the wall, switch it back on, and within 30 seconds hold the remote's power button for 5 seconds until the fan beeps twice."
+  required_facts: ["30 seconds", "5 seconds"]
+  forbidden_claims: ["hold for 10 seconds"]
+  expected_behavior: answer
+  source_chunks: ["vayu_f1_fan#remote_control", "vayu_f1_fan#troubleshooting"]
+  smoke: false
+
+- id: G-TRB-008
+  category: troubleshooting
+  difficulty: medium
+  product: vayu_f1_fan
+  question: "fan making hmming noise wat to do"
+  reference_answer: "Check that it is connected to a normal wall switch and not to a dimmer switch, because a dimmer can damage the motor electronics."
+  required_facts: ["dimmer"]
+  forbidden_claims: ["oil the motor"]
+  expected_behavior: answer
+  source_chunks: ["vayu_f1_fan#troubleshooting"]
+  smoke: false
+  tags: ["variant_of:G-TRB-001", "typos"]
+
+# ---------------- Numeric constraint (8) ----------------
+- id: G-NUM-001
+  category: numeric_constraint
+  difficulty: easy
+  product: kavach_l1_lock
+  question: "What is the longest auto-lock delay I can set on the Kavach L1?"
+  reference_answer: "180 seconds. The delay can be set from 10 to 180 seconds."
+  required_facts: ["180 seconds or 3 minutes"]
+  forbidden_claims: ["300 seconds"]
+  expected_behavior: answer
+  source_chunks: ["kavach_l1_lock#auto_lock"]
+  smoke: false
+
+- id: G-NUM-002
+  category: numeric_constraint
+  difficulty: medium
+  product: vayu_f1_fan
+  question: "What is the longest timer I can set on the Vayu F1?"
+  reference_answer: "The longest timer is 8 hours (480 minutes)."
+  required_facts: ["480 minutes or 8 hours"]
+  forbidden_claims: ["12 hours", "no limit"]
+  expected_behavior: answer
+  source_chunks: ["vayu_f1_fan#timer"]
+  smoke: true
+
+- id: G-NUM-003
+  category: numeric_constraint
+  difficulty: medium
+  product: vayu_f1_fan
+  question: "Can I set a 45-minute timer on the Vayu F1?"
+  reference_answer: "No. The timer is set in steps of 30 minutes, so 45 minutes is not possible; 30 or 60 minutes are."
+  required_facts: ["30 minutes"]
+  forbidden_claims: ["yes, you can set 45 minutes"]
+  expected_behavior: answer
+  source_chunks: ["vayu_f1_fan#timer"]
+  smoke: false
+
+- id: G-NUM-004
+  category: numeric_constraint
+  difficulty: easy
+  product: jal_p2_purifier
+  question: "What is the maximum TDS of input water the Jal P2 can handle?"
+  reference_answer: "Up to 2000 mg per litre."
+  required_facts: ["2000 mg"]
+  forbidden_claims: ["500 mg", "1000 mg"]
+  expected_behavior: answer
+  source_chunks: ["jal_p2_purifier#overview"]
+  smoke: true
+
+- id: G-NUM-005
+  category: numeric_constraint
+  difficulty: medium
+  product: mixo_m3_grinder
+  question: "How hot can a liquid be when I put it in a Mixo M3 jar?"
+  reference_answer: "Never above 60 degrees Celsius, because steam pressure can push the lid off."
+  required_facts: ["60 degrees"]
+  forbidden_claims: ["100 degrees", "boiling liquids are fine"]
+  expected_behavior: answer
+  source_chunks: ["mixo_m3_grinder#jars"]
+  smoke: false
+
+- id: G-NUM-006
+  category: numeric_constraint
+  difficulty: hard
+  product: mixo_m3_grinder
+  question: "What is the most liquid I should put in the Mixo M3 liquidizing jar?"
+  reference_answer: "The liquidizing jar holds 1.5 litres, but it must not be filled beyond two thirds, so about 1 litre."
+  required_facts: ["1 litres or 2 thirds"]
+  forbidden_claims: ["fill it to the top"]
+  expected_behavior: answer
+  source_chunks: ["mixo_m3_grinder#jars"]
+  smoke: false
+
+- id: G-NUM-007
+  category: numeric_constraint
+  difficulty: medium
+  product: mixo_m3_grinder
+  question: "After running the Mixo M3 for 3 minutes, how long should the motor rest?"
+  reference_answer: "At least 2 minutes before the next use."
+  required_facts: ["2 minutes"]
+  forbidden_claims: ["no rest"]
+  expected_behavior: answer
+  source_chunks: ["mixo_m3_grinder#speed_knob"]
+  smoke: false
+
+- id: G-NUM-008
+  category: numeric_constraint
+  difficulty: hard
+  product: vayu_f1_fan
+  question: "vayu f1 ka max timer kitne ghante ka hai?"
+  reference_answer: "The longest timer is 8 hours (480 minutes)."
+  required_facts: ["480 minutes or 8 hours"]
+  forbidden_claims: ["12 hours", "no limit"]
+  expected_behavior: answer
+  source_chunks: ["vayu_f1_fan#timer"]
+  smoke: false
+  tags: ["variant_of:G-NUM-002", "hinglish"]
+
+# ---------------- Unanswerable (12) ----------------
+- id: G-UNA-001
+  category: unanswerable
+  difficulty: easy
+  product: kavach_l1_lock
+  question: "Does the Kavach L1 lock work with Alexa?"
+  reference_answer: "The manuals do not say. The assistant should say it has no information."
+  required_facts: []
+  forbidden_claims: ["works with Alexa", "supports Alexa", "compatible with Alexa"]
+  expected_behavior: refuse_unknown
+  source_chunks: []
+  absent_terms: ["Alexa"]
+  smoke: true
+
+- id: G-UNA-002
+  category: unanswerable
+  difficulty: easy
+  product: vayu_f1_fan
+  question: "Can I control the Vayu F1 with Google Home?"
+  reference_answer: "The manuals do not say. The assistant should say it has no information."
+  required_facts: []
+  forbidden_claims: ["yes, it works with Google Home", "Google Home is supported"]
+  expected_behavior: refuse_unknown
+  source_chunks: []
+  absent_terms: ["Google"]
+  smoke: false
+
+- id: G-UNA-003
+  category: unanswerable
+  difficulty: easy
+  product: jal_p2_purifier
+  question: "How much does the Jal P2 water purifier cost?"
+  reference_answer: "The manuals do not give a price. The assistant should say it has no information."
+  required_facts: []
+  forbidden_claims: ["rupees", "Rs"]
+  expected_behavior: refuse_unknown
+  source_chunks: []
+  absent_terms: ["price", "cost", "rupees"]
+  smoke: true
+
+- id: G-UNA-004
+  category: unanswerable
+  difficulty: easy
+  product: kavach_l1_lock
+  question: "Does the Kavach L1 have a fingerprint reader?"
+  reference_answer: "The manuals do not mention a fingerprint reader. The assistant should say it has no information."
+  required_facts: []
+  forbidden_claims: ["yes, it has a fingerprint reader", "register your fingerprint"]
+  expected_behavior: refuse_unknown
+  source_chunks: []
+  absent_terms: ["fingerprint"]
+  smoke: false
+
+- id: G-UNA-005
+  category: unanswerable
+  difficulty: medium
+  product: vayu_f1_fan
+  question: "How loud is the Vayu F1 in decibels at top speed?"
+  reference_answer: "The manuals do not give a noise level. The assistant should say it has no information."
+  required_facts: []
+  forbidden_claims: ["dB at speed 5", "decibels at top speed"]
+  expected_behavior: refuse_unknown
+  source_chunks: []
+  absent_terms: ["decibel", "decibels", "dB"]
+  smoke: false
+
+- id: G-UNA-006
+  category: unanswerable
+  difficulty: easy
+  product: mixo_m3_grinder
+  question: "How much does the Mixo M3 weigh?"
+  reference_answer: "The manuals do not give its weight. The assistant should say it has no information."
+  required_facts: []
+  forbidden_claims: ["kg", "kilograms"]
+  expected_behavior: refuse_unknown
+  source_chunks: []
+  absent_terms: ["weigh", "weight", "kg"]
+  smoke: false
+
+- id: G-UNA-007
+  category: unanswerable
+  difficulty: medium
+  product: jal_p2_purifier
+  question: "Can the Jal P2 purifier run on solar power?"
+  reference_answer: "The manuals do not say. The assistant should say it has no information."
+  required_facts: []
+  forbidden_claims: ["yes, it can run on solar", "solar power is supported"]
+  expected_behavior: refuse_unknown
+  source_chunks: []
+  absent_terms: ["solar"]
+  smoke: true
+
+- id: G-UNA-008
+  category: unanswerable
+  difficulty: medium
+  product: kavach_l1_lock
+  question: "Can I open the Kavach L1 with an NFC tag?"
+  reference_answer: "The manuals do not mention NFC tags. The assistant should say it has no information."
+  required_facts: []
+  forbidden_claims: ["yes, tap the NFC tag", "NFC is supported"]
+  expected_behavior: refuse_unknown
+  source_chunks: []
+  absent_terms: ["NFC", "RFID"]
+  smoke: false
+
+- id: G-UNA-009
+  category: unanswerable
+  difficulty: easy
+  product: kavach_l1_lock
+  question: "kavach lock mein fingerprint sensor hai kya?"
+  reference_answer: "The manuals do not mention a fingerprint reader. The assistant should say it has no information."
+  required_facts: []
+  forbidden_claims: ["yes, it has a fingerprint reader", "register your fingerprint"]
+  expected_behavior: refuse_unknown
+  source_chunks: []
+  absent_terms: ["fingerprint"]
+  smoke: false
+  tags: ["variant_of:G-UNA-004", "hinglish"]
+
+- id: G-UNA-010
+  category: unanswerable
+  difficulty: medium
+  product: kavach_l1_lock
+  question: "kavach l1 alexa se chalega kya?"
+  reference_answer: "The manuals do not say. The assistant should say it has no information."
+  required_facts: []
+  forbidden_claims: ["works with Alexa", "supports Alexa", "compatible with Alexa"]
+  expected_behavior: refuse_unknown
+  source_chunks: []
+  absent_terms: ["Alexa"]
+  smoke: false
+  tags: ["variant_of:G-UNA-001", "hinglish"]
+
+- id: G-UNA-011
+  category: unanswerable
+  difficulty: hard
+  product: warranty_service_policy
+  question: "If I sell my Vayu F1 fan, can the new owner transfer the remaining warranty to their name?"
+  reference_answer: "The policy does not say whether a warranty can be transferred. The assistant should say it has no information."
+  required_facts: []
+  forbidden_claims: ["yes, the warranty can be transferred", "yes, it is transferable"]
+  expected_behavior: refuse_unknown
+  source_chunks: []
+  absent_terms: ["transfer", "transferable"]
+  smoke: false
+
+- id: G-UNA-012
+  category: unanswerable
+  difficulty: hard
+  product: jal_p2_purifier
+  question: "What material is the Jal P2 RO membrane made of?"
+  reference_answer: "The manuals do not say what the membrane is made of. The assistant should say it has no information."
+  required_facts: []
+  forbidden_claims: ["polyamide", "thin-film composite", "cellulose"]
+  expected_behavior: refuse_unknown
+  source_chunks: []
+  absent_terms: ["polyamide", "cellulose"]
+  smoke: false
+
+# ---------------- False premise (4) ----------------
+- id: G-FPR-001
+  category: false_premise
+  difficulty: medium
+  product: vayu_f1_fan
+  question: "Since the Vayu F1 has seven speeds, which speed is best for a bedroom?"
+  reference_answer: "The Vayu F1 does not have seven speeds; it has six levels, 0 to 5. Speed 3 is the recommended everyday speed for a medium bedroom."
+  required_facts: ["0 to 5 or 6 speed levels or 6 levels or 6 speeds", "speed 3"]
+  forbidden_claims: ["speed 7 is best", "speed 6 is best"]
+  expected_behavior: correct_premise
+  source_chunks: ["vayu_f1_fan#speed_settings"]
+  smoke: true
+
+- id: G-FPR-002
+  category: false_premise
+  difficulty: hard
+  product: kavach_l1_lock
+  question: "How long does it take to recharge the Kavach L1 battery through its USB-C port?"
+  reference_answer: "The USB-C port does not charge the batteries. It is an emergency port that powers the lock long enough to accept a PIN. The lock uses 4 AA batteries, which must be replaced."
+  required_facts: ["not charge", "AA"]
+  forbidden_claims: ["fully charged in", "hours to charge"]
+  expected_behavior: correct_premise
+  source_chunks: ["kavach_l1_lock#battery"]
+  smoke: false
+
+- id: G-FPR-003
+  category: false_premise
+  difficulty: medium
+  product: kavach_l1_lock
+  question: "How do I factory reset my Kavach L1 from outside the door?"
+  reference_answer: "That is not possible. The reset button is inside the battery cover on the indoor unit, so a factory reset can only be done from inside the house."
+  required_facts: ["inside"]
+  forbidden_claims: ["from the outdoor keypad"]
+  expected_behavior: correct_premise
+  source_chunks: ["kavach_l1_lock#pin_reset_by_the_owner"]
+  smoke: false
+
+- id: G-FPR-004
+  category: false_premise
+  difficulty: easy
+  product: mixo_m3_grinder
+  question: "Which dishwasher setting should I use for the Mixo M3 jars?"
+  reference_answer: "None. The jars are not dishwasher safe; wash them by hand with warm water and mild dish soap."
+  required_facts: ["not dishwasher safe"]
+  forbidden_claims: ["use the eco setting", "jars are dishwasher safe"]
+  expected_behavior: correct_premise
+  source_chunks: ["mixo_m3_grinder#cleaning"]
+  smoke: false
