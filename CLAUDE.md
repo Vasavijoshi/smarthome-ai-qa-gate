@@ -17,5 +17,5 @@ The single source of truth is `docs/PROJECT_REPORT.md`. Follow it strictly.
 - Phase 1: Claude drafted the six manuals; the author reviews and freezes them as kb_version 1.0 before Phase 2.
 - Split chunks get ids like `vayu_f1_fan#troubleshooting/2`. Retrieval hit (M5) compares only the `document#section` part (`assistant.rag.section_of`). Only the four Troubleshooting sections are over 200 words, so v3.0's 400-word chunks keep them whole.
 - Admin hooks: `POST /admin/reset` in Phase 1, `/admin/kb/documents` in Phase 4, `/admin/faults` in Phase 5.
-- `POST /chat` takes an optional integer `seed` (defaults to `LLM_SEED`), so the framework can run repeats with seeds 11, 22, 33. Approved by the author; it must also be noted in report section 6.1.7.
+- `POST /chat` takes an optional integer `seed` (defaults to `LLM_SEED`), so the framework can run repeats with seeds 11, 22, 33. Approved by the author and noted in report section 6.1.7.
 - Deviations from the report go in the README deviations log.
