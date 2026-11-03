@@ -1,0 +1,35 @@
+Judge stability test (6.3.5), run v1.0-20261103T152402, started 2026-11-03T23:28:48+05:30
+G-FPR-001 faithfulness: scores=[1.0, 1.0, 1.0] spread=0.0
+G-FPR-001 correctness: scores=[0.0, 0.0, 0.0] spread=0.0
+G-FAC-010 faithfulness: scores=[0.5, 0.5, 1.0] spread=0.5
+G-FAC-010 answer_relevancy: scores=[1.0, 1.0, 1.0] spread=0.0
+G-FAC-010 correctness: scores=[1.0, 0.8, 0.8] spread=0.19999999999999996
+G-MHP-002 faithfulness: scores=[1.0, 1.0, 1.0] spread=0.0
+G-MHP-002 answer_relevancy: scores=[1.0, 1.0, 1.0] spread=0.0
+G-MHP-002 correctness: scores=[0.8, 0.8, 0.8] spread=0.0
+G-TRB-002 faithfulness: scores=[1.0, 0.75, 0.75] spread=0.25
+G-TRB-002 answer_relevancy: scores=[1.0, 1.0, 1.0] spread=0.0
+G-TRB-002 correctness: scores=[0.8, 0.8, 0.8] spread=0.0
+G-FAC-004 faithfulness: scores=[1.0, 1.0, 1.0] spread=0.0
+G-FAC-004 answer_relevancy: scores=[1.0, 1.0, 1.0] spread=0.0
+G-FAC-004 correctness: scores=[1.0, 1.0, 1.0] spread=0.0
+G-FAC-005 faithfulness: scores=[1.0, 1.0, 1.0] spread=0.0
+G-FAC-005 answer_relevancy: scores=[1.0, 1.0, 1.0] spread=0.0
+G-FAC-005 correctness: scores=[1.0, 1.0, 1.0] spread=0.0
+G-UNA-005 appropriate_refusal: scores=[0.0, 0.0, 0.0] spread=0.0
+G-NUM-003 faithfulness: scores=[1.0, 1.0, 1.0] spread=0.0
+G-NUM-003 answer_relevancy: scores=[0.0, 0.0, 0.0] spread=0.0
+G-NUM-003 correctness: scores=[0.7, 0.5, 0.5] spread=0.19999999999999996
+G-FAC-007 faithfulness: scores=[1.0, 0.0, 0.0] spread=1.0
+G-FAC-007 answer_relevancy: scores=[1.0, 0.0, 0.0] spread=1.0
+G-FAC-007 correctness: scores=[0.9, 0.8, 0.8] spread=0.09999999999999998
+G-FPR-004 faithfulness: scores=[0.3333333333333333, 1.0, 1.0] spread=0.6666666666666667
+G-FPR-004 correctness: scores=[0.8, 0.8, 0.8] spread=0.0
+finished 2026-11-04T00:22:31+05:30
+
+Summary (computed from the lines above)
+cases re-judged: 10, metric measurements: 26, re-judgements per measurement: 3
+measurements with spread 0: 18 of 26; spread below 0.1: 18 of 26
+cases with every metric spread below 0.1: 5 of 10 (G-FAC-004, G-FAC-005, G-FPR-001, G-MHP-002, G-UNA-005)
+largest spread: 1.00 (G-FAC-007 faithfulness, G-FAC-007 answer_relevancy)
+pass/fail verdict flips across the 3 re-judgements: 5 measurements in 4 cases: G-FAC-010 faithfulness, G-NUM-003 correctness, G-FAC-007 faithfulness, G-FAC-007 answer_relevancy, G-FPR-004 faithfulness
