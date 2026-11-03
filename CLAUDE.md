@@ -12,6 +12,19 @@ The single source of truth is `docs/PROJECT_REPORT.md`. Follow it strictly.
 8. After each phase, report: files created, how to run them, what to test, and 3 interview questions about the new code.
 9. Commit after each phase with a clear message.
 
+## Quality bar
+
+At the end of every phase, before reporting, do this self-audit and show it to the author:
+
+1. Re-read the report sections for the phase and tick off every requirement, one line each, with the file that implements it. List anything missing or different.
+2. Run the full test suite, ruff and the dataset validator. Show the counts.
+3. List every deviation from the report, and confirm each one is both in the README deviations log and in the report text.
+4. For every number reported, name the SQLite query or file it came from. No number from memory.
+5. List known weaknesses, even small ones, instead of hiding them.
+6. For every scorer or detector, say what input would fool it.
+
+Never tune prompts, rubrics, thresholds or the golden set after seeing results. If something looks wrong, investigate read-only first and report.
+
 ## Decisions taken with the author
 
 - Phase 1: Claude drafted the six manuals; the author reviews and freezes them as kb_version 1.0 before Phase 2.
