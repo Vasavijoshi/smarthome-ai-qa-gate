@@ -19,3 +19,4 @@ The single source of truth is `docs/PROJECT_REPORT.md`. Follow it strictly.
 - Admin hooks: `POST /admin/reset` in Phase 1, `/admin/kb/documents` in Phase 4, `/admin/faults` in Phase 5.
 - `POST /chat` takes an optional integer `seed` (defaults to `LLM_SEED`), so the framework can run repeats with seeds 11, 22, 33. Approved by the author and noted in report section 6.1.7.
 - Deviations from the report go in the README deviations log.
+- Golden dataset v1.0 is frozen at hash `5d0396e9dc0590a4db3e3bd646fe01be54ef5bc2edeaf66959e11223ceb86a24` (commit 6e5bbca). Never edit `data/golden_set.yaml` without telling the author first.

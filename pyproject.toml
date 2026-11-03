@@ -7,6 +7,9 @@ requires-python = ">=3.11,<3.12"
 [tool.pytest.ini_options]
 pythonpath = ["."]
 testpaths = ["tests"]
+# Evaluation suites need a live HomeMate, so a plain `pytest` runs only unit and contract tests.
+# Select them explicitly, e.g. `pytest -m golden` (a later -m overrides this one).
+addopts = ["-m", "unit or contract"]
 markers = [
     "unit: fast tests of single functions",
     "contract: API and tool-layer tests against the in-process app",

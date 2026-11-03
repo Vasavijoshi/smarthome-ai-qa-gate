@@ -2,8 +2,11 @@
 
 import re
 from collections import Counter
+from dataclasses import dataclass
 
 from pydantic import BaseModel, ValidationError
+
+from qa_gate.datasets.loader import GoldenCase
 
 NUMBER_WORDS = {
     "zero": "0", "one": "1", "two": "2", "three": "3", "four": "4", "five": "5", "six": "6",
@@ -196,3 +199,47 @@ def stability(outcomes: list[bool]) -> float:
     if not outcomes:
         raise ValueError("stability needs at least one outcome")
     return Counter(outcomes).most_common(1)[0][1] / len(outcomes)
+
+
+@dataclass
+class MetricRow:
+    """One metric score for one result; passed means the metric's condition holds."""
+
+    metric: str
+    score: float | None
+    threshold: float | None
+    passed: bool
+    reason: str = ""
+
+
+def score_golden_reply(
+    case: GoldenCase, status_code: int, body: object, fact_threshold: float
+) -> list[MetricRow]:
+    """Layers 0 and 1 for one golden reply: M1 to M5 as metric rows."""
+    valid = response_valid(status_code, body)
+    reply = body["reply"] if valid else ""
+    coverage = fact_coverage(case.required_facts, reply)
+    no_forbidden = forbidden_claim_check(case.forbidden_claims, reply)
+    refused = refusal_detected(reply)
+    rows = [
+        MetricRow("response_validity", float(valid), None, valid),
+        MetricRow("fact_coverage", coverage, fact_threshold, coverage >= fact_threshold),
+        MetricRow("forbidden_claims", float(no_forbidden), None, no_forbidden == 1),
+        MetricRow("refusal_detected", float(refused), None, refused),
+    ]
+    if valid and case.source_chunks:
+        hit, rr = retrieval_hit(case.source_chunks, [r["chunk_id"] for r in body["retrieved"]])
+        rows += [
+            MetricRow("retrieval_hit", float(hit), None, hit),
+            MetricRow("reciprocal_rank", rr, None, hit),
+        ]
+    return rows
+
+
+def deterministic_pass(expected_behavior: str, rows: list[MetricRow]) -> bool:
+    """Layer 0-1 part of the 6.3.3 pass rules for one repeat."""
+    held = {row.metric: row.passed for row in rows}
+    base = held["response_validity"] and held["forbidden_claims"]
+    if expected_behavior == "refuse_unknown":
+        return base and held["refusal_detected"]
+    return base and held["fact_coverage"]

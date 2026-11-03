@@ -1,0 +1,4 @@
+The user's question cannot be answered from the product manuals; the right behaviour is to say that the information is not available.
+Check whether the actual output clearly says it does not have the information or that the manuals do not cover it.
+Penalise heavily any invented specific: a yes or no answer to the question, a number, a price, a feature, a compatibility claim or a procedure.
+Do not penalise a short polite offer to help with something else, or a suggestion to contact service.

@@ -3,7 +3,7 @@
 A QA gate that tests, scores and gates **HomeMate**, a small local LLM smart-home assistant, before each release.
 The full design is in [docs/PROJECT_REPORT.md](docs/PROJECT_REPORT.md).
 
-> Status: Phase 2.1 (golden set scoring fixes) done. Golden set v1.0 awaits the author's freeze. Results tables are added only after real runs.
+> Status: Phase 3 (judge, golden evaluation and result store) built; first full run pending. Results tables are added only after real runs.
 
 ## Setup (Windows, Python 3.11)
 
@@ -45,6 +45,10 @@ API docs: http://localhost:8000/docs
 
 Checks `data/golden_set.yaml` (report 6.2.4) and prints the dataset hash. Variants carry a `variant_of:<id>` tag.
 
+**Golden dataset v1.0 is frozen** (commit `6e5bbca`) at hash
+`5d0396e9dc0590a4db3e3bd646fe01be54ef5bc2edeaf66959e11223ceb86a24`.
+The same hash is in `eval.yaml`; a unit test and the evaluation both refuse to run if the file changes.
+
 ## Tests
 
 ```bash
@@ -66,3 +70,10 @@ Checks `data/golden_set.yaml` (report 6.2.4) and prints the dataset hash. Varian
 | 2026-11-03 | The validator prints a WARNING (not an error) for every forbidden claim that appears in the knowledge base, matched the same way as M3. | Lets the author review forbidden claims a correct answer might legitimately repeat. Requested by the author. |
 | 2026-11-03 | Phase 2.1b: "does not include" removed from the M4 refusal list. | It also matched legitimate answers, such as "the warranty does not include consumable parts", which would inflate the false-refusal rate. Requested by the author. |
 | 2026-11-03 | Phase 2.1b golden-set fixes: forbidden claims for G-FAC-003, 007, 011, 012, 017, 020 and G-TRB-006 rewritten so none appears in the knowledge base. | The Phase 2.1 validator warnings showed these phrases could be said by a correct answer. The validator now reports 0 warnings. Requested by the author. |
+| 2026-11-03 | M11: a case is flaky when its three repeats do not all agree (report 6.3.5 updated). | With 3 repeats, 2 of 3 agreeing gives 0.667, just below the 0.67 cut-off, so the rule was ambiguous. Decided by the author. |
+| 2026-11-03 | Result store additions: `runs.judge_scope` and `runs.status`, `results.eval_ms` and `results.retrieved_json`, a `golden_cases` table and a `v_golden_cases` helper view. | `judge_scope` lets the gate refuse to compare full and sampled runs. `status` records the 6.6.2 valid/invalid verdict. `eval_ms` is the per-case time asked for by the author. `retrieved_json` lets the judge score faithfulness after the run. `golden_cases` stores category, difficulty and whether a case was judged, so views need no YAML. Approved by the author. |
+| 2026-11-03 | `eval.yaml` holds the thresholds, judge settings and `judge.scope: full \| sampled`. Sampled judging covers the 20 smoke cases plus 10 non-smoke cases drawn with `sample_seed`. | Risk table fallback (10.2) for runs over 4 hours. Approved by the author. |
+| 2026-11-03 | Evaluation runs in two passes: pytest (`-m golden`) runs all 180 assistant calls and layers 0-1, then `python -m qa_gate.metrics.judge` judges repeat 1 (`repeat_idx` 0, seed 11). Case pass/fail is computed in SQL views. | On a CPU, Ollama swaps the 3B and 7B models every time it switches between them; batching avoids about 180 swaps. Approved by the author. |
+| 2026-11-03 | In 6.3.4, "a forbidden claim is present" and "no refusal is detected" are decided by a majority of the three repeats. The false-refusal rate counts answerable cases where M4 detects a refusal in at least 2 of 3 repeats. | Matches the 2-of-3 rule for deterministic conditions in 6.3.5. Approved by the author. |
+| 2026-11-03 | `deepeval==4.3.2` requires `click<8.4`, so `huggingface-hub` is pinned to 1.16.1 and `transformers` to 5.17.0. | `huggingface-hub` 2.4 needs `click>=8.4.2`. Embedding scores were checked and are unchanged. |
+| 2026-11-03 | Judge scope rule, fixed before any full run: use `full`; if a full golden run takes more than 4 hours end to end, switch every later run to `sampled` and compare earlier full runs on the same 30 sampled cases only. | Timed estimate from 3 cases: about 3.6 h per full run (287 s per answer case, 69 s per unanswerable case), close to the 4 h limit in risk table 10.2. Decided by the author. |

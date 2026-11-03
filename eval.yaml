@@ -1,0 +1,34 @@
+# Evaluation settings (report 6.3). Written before the first run; thresholds are never changed afterwards.
+
+# Frozen golden dataset v1.0 (Phase 2.1b, commit 6e5bbca). The eval refuses to run on any other hash.
+golden_dataset_hash: 5d0396e9dc0590a4db3e3bd646fe01be54ef5bc2edeaf66959e11223ceb86a24
+
+homemate_url: http://localhost:8000
+db_path: runs/qa_results.db
+
+# Every case runs three times with these seeds (6.3.5). repeat_idx 0, 1, 2 = seeds 11, 22, 33.
+seeds: [11, 22, 33]
+
+# Pass thresholds (6.3.2 and 6.3.3).
+thresholds:
+  fact_coverage: 0.8
+  faithfulness: 0.7
+  answer_relevancy: 0.7
+  correctness: 0.6
+  appropriate_refusal: 0.7
+
+judge:
+  model: qwen2.5:7b
+  temperature: 0
+  seed: 7
+  # full: judge every case on repeat_idx 0. sampled: the 20 smoke cases plus
+  # sample_extra non-smoke cases drawn with sample_seed (risk table, 10.2).
+  # Pre-registered (2026-11-03, before any full run): start with full. If a full golden run takes
+  # more than 4 hours end to end, switch every later run to sampled and compare earlier full runs
+  # on the same 30 sampled cases only.
+  scope: full
+  sample_seed: 2026
+  sample_extra: 10
+
+# Illustrative cost proxy (6.3.2): local models are free, this only shows how cost would be tracked.
+cost_per_1k_tokens: 0.002

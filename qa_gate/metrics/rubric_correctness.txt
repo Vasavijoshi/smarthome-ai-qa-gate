@@ -1,0 +1,5 @@
+Compare the actual output with the expected output for the user's question about a home appliance.
+Check whether every fact, number and unit in the expected output is present and correct in the actual output; the same value in another unit counts as correct (8 hours = 480 minutes).
+Penalise heavily any number, limit, step or product detail in the actual output that contradicts the expected output.
+If the question assumes something false, check that the actual output corrects it in the same way as the expected output.
+Do not penalise different wording, extra politeness, or extra details that do not contradict the expected output.

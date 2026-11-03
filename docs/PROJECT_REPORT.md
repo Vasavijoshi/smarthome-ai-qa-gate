@@ -442,7 +442,7 @@ The two parts are always reported separately as well, because they have differen
 - The deterministic layer (M1 to M5, M10) is applied to all three runs.
 - The judge layer (M6 to M9) is applied to **repeat 1 only**, because judge calls are the slowest part of a run.
 - A case passes when its deterministic conditions hold in at least two of the three repeats and its judge conditions hold on repeat 1. Suite metrics are the average of case outcomes.
-- Cases with stability below 0.67 are listed as **flaky**. They stay in the gate, and the flaky list is reported.
+- Cases with stability below 0.67 are listed as **flaky**. They stay in the gate, and the flaky list is reported. With three repeats, stability is either 1.0 or 0.67 (2 of 3 agree), so in practice a case is flaky when its three repeats do not all agree (decided in Phase 3, see the README deviations log).
 - The judge runs at temperature 0 with a fixed seed. A **judge stability test** re-judges 10 random cases three times and reports the spread of scores.
 
 #### 6.3.6 Judge setup
