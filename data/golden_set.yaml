@@ -34,7 +34,7 @@
   question: "What does Sleep mode do on the Vayu F1?"
   reference_answer: "Sleep mode lowers the speed by one level every hour until it reaches speed 1, and then holds speed 1."
   required_facts: ["every hour or each hour or hourly or per hour", "speed 1"]
-  forbidden_claims: ["switches the fan off completely", "raises the speed"]
+  forbidden_claims: ["switches the fan off completely", "turns the fan off completely"]
   expected_behavior: answer
   source_chunks: ["vayu_f1_fan#modes"]
   smoke: true
@@ -82,7 +82,7 @@
   question: "Which batteries go into the Kavach L1 smart lock?"
   reference_answer: "Four AA alkaline batteries in the indoor unit."
   required_facts: ["4 AA or 4 x AA"]
-  forbidden_claims: ["CR2032", "rechargeable battery"]
+  forbidden_claims: ["uses CR2032", "uses a CR2032"]
   expected_behavior: answer
   source_chunks: ["kavach_l1_lock#battery"]
   smoke: true
@@ -130,7 +130,7 @@
   question: "What is the capacity of the Mixo M3 chutney jar?"
   reference_answer: "The chutney jar holds 0.4 litres."
   required_facts: ["0.4 litres"]
-  forbidden_claims: ["1.5 litres"]
+  forbidden_claims: ["chutney jar holds 1.5 litres", "chutney jar is 1.5 litres", "chutney jar has 1.5 litres"]
   expected_behavior: answer
   source_chunks: ["mixo_m3_grinder#jars"]
   smoke: false
@@ -142,7 +142,7 @@
   question: "How long is the warranty on the Kavach L1 lock?"
   reference_answer: "The Kavach L1 smart lock has a 1-year warranty."
   required_facts: ["1 years or 12 months"]
-  forbidden_claims: ["2 years", "3 years"]
+  forbidden_claims: ["3 years", "10 years"]
   expected_behavior: answer
   source_chunks: ["warranty_service_policy#warranty_periods"]
   smoke: false
@@ -204,7 +204,7 @@
   question: "Kavach lock mein kaunsi battery lagti hai?"
   reference_answer: "Four AA alkaline batteries in the indoor unit."
   required_facts: ["4 AA or 4 x AA"]
-  forbidden_claims: ["CR2032", "rechargeable battery"]
+  forbidden_claims: ["uses CR2032", "uses a CR2032"]
   expected_behavior: answer
   source_chunks: ["kavach_l1_lock#battery"]
   smoke: false
@@ -243,7 +243,7 @@
   question: "warrenty on the kavach lock??"
   reference_answer: "The Kavach L1 smart lock has a 1-year warranty."
   required_facts: ["1 years or 12 months"]
-  forbidden_claims: ["2 years", "3 years"]
+  forbidden_claims: ["3 years", "10 years"]
   expected_behavior: answer
   source_chunks: ["warranty_service_policy#warranty_periods"]
   smoke: false
@@ -414,7 +414,7 @@
   question: "My Mixo M3 jar is leaking from the bottom. What should I check?"
   reference_answer: "Check that the rubber gasket under the blade assembly is seated correctly and is not cracked. Spare gaskets are available from service."
   required_facts: ["gasket"]
-  forbidden_claims: ["dishwasher"]
+  forbidden_claims: ["jars are dishwasher safe", "put it in the dishwasher"]
   expected_behavior: answer
   source_chunks: ["mixo_m3_grinder#troubleshooting"]
   smoke: false

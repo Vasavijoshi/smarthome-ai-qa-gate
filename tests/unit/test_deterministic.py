@@ -299,6 +299,6 @@ def test_refusal_variants_not_flagged_on_normal_answers(answer):
     assert not refusal_detected(answer)
 
 
-def test_known_limit_does_not_include_flags_a_real_answer():
-    """Documented weakness: 'does not include' also appears in legitimate answers."""
-    assert refusal_detected("The warranty does not include consumable parts such as filters.")
+def test_does_not_include_is_not_a_refusal_phrase():
+    """Removed in Phase 2.1b: 'does not include' appears in legitimate answers about exclusions."""
+    assert not refusal_detected("The warranty does not include consumable parts such as filters.")

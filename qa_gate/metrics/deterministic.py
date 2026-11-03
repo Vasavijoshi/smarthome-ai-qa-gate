@@ -52,7 +52,6 @@ REFUSAL_PHRASES = [
     "do not contain",
     "does not provide",
     "do not provide",
-    "does not include",
     "no details",
     "not provided",
     "not available in",
