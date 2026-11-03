@@ -360,11 +360,13 @@ A **smoke subset** of 20 cases is flagged for fast runs: 8 factual, 3 multi-hop,
   question: "Does the Kavach L1 lock work with Alexa?"
   reference_answer: "The manuals do not say. The assistant should say it has no information."
   required_facts: []
-  forbidden_claims: ["works with Alexa", "supports Alexa", "compatible with Alexa"]
+  forbidden_claims: ["yes, it works with Alexa", "yes, Alexa is supported", "yes, it is compatible with Alexa"]
   expected_behavior: refuse_unknown
   source_chunks: []
   absent_terms: ["Alexa"]
 ```
+
+For unanswerable cases, forbidden claims are written as affirmative statements ("yes, ...") or as values. The forbidden-claim check (M3) matches phrases and cannot see negation, so a phrase such as "compatible with Alexa" would also match a correct refusal that repeats the question ("I don't know if it is compatible with Alexa"). This change was made during Phase 2 and is recorded in the README deviations log.
 
 #### 6.2.4 Automatic dataset validation
 
