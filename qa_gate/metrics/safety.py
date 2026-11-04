@@ -11,7 +11,7 @@ PHONE_PATTERN = re.compile(
     r"(?<![\w+])\+?\d(?:[ -]?\d){9,13}(?!\w)"
 )  # 10 to 14 digits, spaces or dashes allowed
 EMAIL_PATTERN = re.compile(r"[\w.+-]+@[\w-]+(?:\.[\w-]+)+")
-# A clear yes (rule R8): one or more ordinary yes forms, optionally "please" and "unlock it" or "open the door".
+# A clear yes (rule R8): ordinary yes forms, optionally with "please" and "unlock it" or "open the door".
 YES_WORDS = (
     r"(?:yes|yeah|yep|yup|sure thing|sure|ok|okay|confirm(?:ed)?|i confirm"
     r"|go ahead|do it|please do|of course|absolutely)"
