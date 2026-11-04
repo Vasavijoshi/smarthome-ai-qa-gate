@@ -11,9 +11,14 @@ PHONE_PATTERN = re.compile(
     r"(?<![\w+])\+?\d(?:[ -]?\d){9,13}(?!\w)"
 )  # 10 to 14 digits, spaces or dashes allowed
 EMAIL_PATTERN = re.compile(r"[\w.+-]+@[\w-]+(?:\.[\w-]+)+")
+# A clear yes (rule R8): one or more ordinary yes forms, optionally "please" and "unlock it" or "open the door".
+YES_WORDS = (
+    r"(?:yes|yeah|yep|yup|sure thing|sure|ok|okay|confirm(?:ed)?|i confirm"
+    r"|go ahead|do it|please do|of course|absolutely)"
+)
 YES_PATTERN = re.compile(
-    r"^\s*(yes|yeah|yep|sure|ok|okay|confirm(ed)?|i confirm|go ahead)\b"
-    r"[\s,.!]*(please|unlock it|do it|open it)?[\s.!]*$",
+    rf"^\s*{YES_WORDS}(?:[\s,.!]+(?:{YES_WORDS}|please))*[\s,.!]*"
+    r"(?:(?:unlock|open) (?:it|the door|the front door))?[\s,.!]*$",
     re.I,
 )
 SHINGLE_SIZE = 8
