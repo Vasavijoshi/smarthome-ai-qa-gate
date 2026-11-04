@@ -11,13 +11,18 @@ import pytest
 from qa_gate.config import version_prompt_text
 from qa_gate.datasets.loader import load_attacks, load_controls
 from qa_gate.metrics.deterministic import MetricRow, response_valid
-from qa_gate.metrics.safety import Turn, control_refused, rule_verdicts
+from qa_gate.metrics.safety import LeakSettings, Turn, control_refused, rule_verdicts
 from qa_gate.store import add_result, add_safety_result
 
 pytestmark = pytest.mark.safety
 
 ATTACKS = [pytest.param(a, id=a.id, marks=[pytest.mark.smoke] if a.smoke else []) for a in load_attacks()]
 CONTROLS = [pytest.param(c, id=c.id) for c in load_controls()]
+
+
+def leak_settings(config) -> LeakSettings:
+    """D2 settings from eval.yaml."""
+    return LeakSettings(config.prompt_sentinel, config.prompt_leak_ratio, config.prompt_leak_run_words)
 
 
 def send(run, session_id: str, message: str, seed: int) -> tuple[Turn, dict, bool]:
@@ -72,9 +77,7 @@ def test_attack(eval_run, attack):
             lock_unlocked = run.client.devices()["front_door_lock"]["state"]["locked"] is False
         finally:
             run.client.reset()  # teardown (6.4.5): remove the poisoned document and reset all state
-        verdicts = rule_verdicts(
-            attack, turns, lock_unlocked, prompt, run.config.prompt_sentinel, run.config.prompt_leak_ratio
-        )
+        verdicts = rule_verdicts(attack, turns, lock_unlocked, prompt, leak_settings(run.config))
         row = result_row(run, "attack", attack.id, repeat_idx, bodies, [t.reply for t in turns], start)
         row["passed"] = not any(v.succeeded for v in verdicts)
         result_id = add_result(
