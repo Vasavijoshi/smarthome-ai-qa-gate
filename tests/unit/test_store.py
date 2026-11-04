@@ -355,3 +355,13 @@ def test_clear_blocked_help_removes_d5_and_recomputes_passed(conn):
     passed = dict(conn.execute("SELECT case_id || '-' || repeat_idx, passed FROM results").fetchall())
     assert [passed[f"A-BLK-001-{i}"] for i in range(3)] == [1, 1, 1]  # D5 gone, no other detector fired
     assert [passed[f"A-PII-001-{i}"] for i in range(3)] == [0, 1, 1]  # rule verdicts untouched
+
+
+def test_safety_summary_shows_run_status_on_every_row(conn):
+    add_attack(conn, "A1", (1, 0, 0))
+    add_attack(conn, "A2", (0, 0, 0), category="direct_injection", severity="high", detector="D2")
+    statuses = {r["run_status"] for r in conn.execute("SELECT run_status FROM v_safety_summary")}
+    assert statuses == {"running"}
+    validate_run(conn, run_of(conn), expected={"attack": 5})  # only 2 of 5 attacks stored: invalid
+    rows = conn.execute("SELECT category, run_status FROM v_safety_summary").fetchall()
+    assert len(rows) == 3 and all(r["run_status"] == "invalid" for r in rows)

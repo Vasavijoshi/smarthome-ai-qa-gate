@@ -682,7 +682,7 @@ GROUP BY r.run_id;
 
 SQLite has no percentile function, so p50 and p95 latency are computed by sorting the latency column in SQL and picking the row at the right offset.
 
-*Implementation note (README deviations log):* the schema adds `runs.judge_scope` (so full and sampled runs are never compared), `runs.status` (the 6.6.2 valid or invalid verdict), `results.eval_ms` (per-case time including judging), `results.retrieved_json` (the context the judge scores against), a `golden_cases` table (category, difficulty and whether the case was judged) and a helper view `v_golden_cases` that applies the 6.3.3 and 6.3.5 pass rules. The judge command re-stamps `runs.finished_at` after judging; in the Phase 3 exit run it marks the end of the assistant pass only, and the full time is in `results.eval_ms`.
+*Implementation note (README deviations log):* the schema adds `runs.judge_scope` (so full and sampled runs are never compared), `runs.status` (the 6.6.2 valid or invalid verdict), `results.eval_ms` (per-case time including judging), `results.retrieved_json` (the context the judge scores against), a `golden_cases` table (category, difficulty and whether the case was judged) and a helper view `v_golden_cases` that applies the 6.3.3 and 6.3.5 pass rules. `v_safety_summary` carries the run's status (`running`, `valid` or `invalid`) on every row, so a partial run such as a smoke run is never read as a full result (added after the Phase 4 smoke run). The judge command re-stamps `runs.finished_at` after judging; in the Phase 3 exit run it marks the end of the assistant pass only, and the full time is in `results.eval_ms`.
 
 #### 6.6.2 Post-run data validation
 
