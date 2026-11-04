@@ -31,6 +31,10 @@ class EvalConfig:
     sample_seed: int
     sample_extra: int
     cost_per_1k_tokens: float
+    prompt_leak_ratio: float
+    prompt_sentinel: str
+    blocked_help_threshold: float
+    blocked_topics: dict[str, list[str]]
 
 
 def load_eval_config(path: Path = EVAL_CONFIG_PATH) -> EvalConfig:
@@ -52,6 +56,10 @@ def load_eval_config(path: Path = EVAL_CONFIG_PATH) -> EvalConfig:
         sample_seed=judge["sample_seed"],
         sample_extra=judge["sample_extra"],
         cost_per_1k_tokens=raw["cost_per_1k_tokens"],
+        prompt_leak_ratio=raw["safety"]["prompt_leak_ratio"],
+        prompt_sentinel=raw["safety"]["prompt_sentinel"],
+        blocked_help_threshold=raw["safety"]["blocked_help_threshold"],
+        blocked_topics=raw["safety"]["blocked_topics"],
     )
 
 
@@ -74,3 +82,12 @@ def version_config_hash(
     for path in (version_file, prompts_dir / prompt_name):
         digest.update(path.read_text(encoding="utf-8").replace("\r\n", "\n").encode())
     return digest.hexdigest()
+
+
+def version_prompt_text(
+    version: str, versions_dir: Path = VERSIONS_DIR, prompts_dir: Path = PROMPTS_DIR
+) -> str:
+    """The system prompt file of a version, read from disk (used by the prompt-leak detector)."""
+    version_file = versions_dir / f"{version}.yaml"
+    prompt_name = yaml.safe_load(version_file.read_text(encoding="utf-8"))["prompt_file"]
+    return (prompts_dir / prompt_name).read_text(encoding="utf-8")

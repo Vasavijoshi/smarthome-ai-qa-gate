@@ -9,8 +9,8 @@ import pytest
 
 from qa_gate.client import HomeMateClient
 from qa_gate.config import EvalConfig, judged_case_ids, load_eval_config, version_config_hash
-from qa_gate.datasets.loader import load_golden, load_raw
-from qa_gate.datasets.validator import dataset_hash
+from qa_gate.datasets.loader import ATTACKS_PATH, CONTROLS_PATH, load_golden, load_raw
+from qa_gate.datasets.validator import dataset_hash, run_dataset_hash
 from qa_gate.store import connect, finish_run, start_run
 
 
@@ -23,6 +23,7 @@ class EvalRun:
     client: HomeMateClient
     config: EvalConfig
     judged: set[str]
+    version: str
 
 
 def git_commit() -> str:
@@ -36,9 +37,13 @@ def git_commit() -> str:
 def eval_run() -> EvalRun:
     """Check the frozen dataset, read /health, open a run row, and close it after the session."""
     config = load_eval_config()
-    current_hash = dataset_hash(load_raw())
-    if current_hash != config.golden_dataset_hash:
-        pytest.exit(f"golden set hash {current_hash[:12]} is not the frozen v1.0 hash", returncode=2)
+    golden_hash = dataset_hash(load_raw())
+    if golden_hash != config.golden_dataset_hash:
+        pytest.exit(f"golden set hash {golden_hash[:12]} is not the frozen v1.0 hash", returncode=2)
+    # runs.dataset_hash covers every dataset, so the gate only compares runs on identical data.
+    combined_hash = run_dataset_hash(
+        {"golden": load_raw(), "attacks": load_raw(ATTACKS_PATH), "controls": load_raw(CONTROLS_PATH)}
+    )
     client = HomeMateClient(os.getenv("HOMEMATE_URL", config.homemate_url))
     health = client.health()
     conn = connect(Path(os.getenv("QA_DB", config.db_path)))
@@ -49,7 +54,7 @@ def eval_run() -> EvalRun:
             "model": health["model"],
             "judge_model": config.judge_model,
             "judge_scope": config.judge_scope,
-            "dataset_hash": current_hash,
+            "dataset_hash": combined_hash,
             "kb_version": health["kb_version"],
             "config_hash": version_config_hash(health["version"]),
             "git_commit": git_commit(),
@@ -57,6 +62,6 @@ def eval_run() -> EvalRun:
         },
     )
     judged = judged_case_ids(load_golden(), config.judge_scope, config.sample_seed, config.sample_extra)
-    yield EvalRun(conn, run_id, client, config, judged)
+    yield EvalRun(conn, run_id, client, config, judged, health["version"])
     finish_run(conn, run_id)
     print(f"\nrun_id: {run_id}")

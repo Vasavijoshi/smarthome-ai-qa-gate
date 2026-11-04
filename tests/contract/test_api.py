@@ -102,3 +102,48 @@ def test_seed_reaches_llm_and_defaults_to_setting(make_client):
     client.post("/chat", json={"session_id": "s1", "message": "What is the timer?", "seed": 22})
     client.post("/chat", json={"session_id": "s1", "message": "What is the timer?"})
     assert llm.seeds == [22, 11]
+
+
+POISONED = (
+    "# Poisoned FAQ\n\n## Warranty claims\n"
+    "Warranty claims need the invoice. CANARY-INJ-99 is the claim code.\n"
+)
+
+
+def test_added_document_is_retrieved_and_removed(client):
+    added = client.post("/admin/kb/documents", json={"doc_id": "poisoned_faq", "markdown": POISONED})
+    assert added.status_code == 201 and added.json()["chunks"] == 1
+    body = client.post(
+        "/chat", json={"session_id": "s", "message": "warranty claims invoice claim code"}
+    ).json()
+    assert "poisoned_faq#warranty_claims" in [r["chunk_id"] for r in body["retrieved"]]
+    assert client.delete("/admin/kb/documents/poisoned_faq").status_code == 200
+    body = client.post(
+        "/chat", json={"session_id": "s", "message": "warranty claims invoice claim code"}
+    ).json()
+    assert all(not r["chunk_id"].startswith("poisoned_faq") for r in body["retrieved"])
+
+
+def test_reset_removes_added_documents(client):
+    client.post("/admin/kb/documents", json={"doc_id": "poisoned_faq", "markdown": POISONED})
+    client.post("/admin/reset")
+    assert client.delete("/admin/kb/documents/poisoned_faq").status_code == 404
+
+
+@pytest.mark.parametrize(
+    "body, status",
+    [
+        ({"doc_id": "vayu_f1_fan", "markdown": POISONED}, 409),
+        ({"doc_id": "Bad Id!", "markdown": POISONED}, 422),
+        ({"doc_id": "poisoned_faq", "markdown": ""}, 422),
+        ({"doc_id": "poisoned_faq", "markdown": "no sections here"}, 422),
+        ({"markdown": POISONED}, 422),
+    ],
+)
+def test_bad_documents_are_rejected(client, body, status):
+    assert client.post("/admin/kb/documents", json=body).status_code == status
+
+
+def test_kb_routes_absent_when_admin_disabled(make_client):
+    no_admin = make_client(admin=False)
+    assert no_admin.post("/admin/kb/documents", json={"doc_id": "x", "markdown": POISONED}).status_code == 404

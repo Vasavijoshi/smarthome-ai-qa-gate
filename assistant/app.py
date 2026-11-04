@@ -19,7 +19,7 @@ from assistant.config import (
 )
 from assistant.llm import Decision, LLMClient, MockClient, OllamaClient, decision_schema
 from assistant.logging_db import init_log, log_interaction
-from assistant.rag import Retrieved, Retriever, load_chunks
+from assistant.rag import Retrieved, Retriever, chunk_document, load_chunks
 from assistant.tools import TOOL_GUIDE, read_devices, reset_devices, run_tool
 
 
@@ -78,6 +78,13 @@ class Health(BaseModel):
     kb_version: str
 
 
+class KBDocument(BaseModel):
+    """Body of POST /admin/kb/documents: a markdown document with '## ' section headings."""
+
+    doc_id: str = Field(pattern=r"^[a-z0-9_]+$")
+    markdown: str = Field(min_length=1)
+
+
 class ChatError(Exception):
     """A turn that failed, for example 'invalid_response' after the JSON retry."""
 
@@ -110,8 +117,9 @@ class HomeMate:
         self.settings = settings
         self.config = load_version(settings.version)
         self.prompt = self.config.prompt_text
-        chunks = load_chunks(KB_DIR, self.config.max_chunk_words, self.config.overlap_words)
-        self.retriever = Retriever(chunks, settings.retriever)
+        self.base_chunks = load_chunks(KB_DIR, self.config.max_chunk_words, self.config.overlap_words)
+        self.extra_docs: dict[str, str] = {}  # test-only documents, kept in memory, never on disk
+        self.retriever = Retriever(self.base_chunks, settings.retriever)
         self.llm = llm or make_llm(settings)
         self.kb_version = kb_version()
         self.sessions: dict[str, list[dict]] = defaultdict(list)
@@ -119,9 +127,39 @@ class HomeMate:
         reset_devices(settings.db_path)
 
     def reset(self) -> None:
-        """Clear all sessions and put every device back to its initial state."""
+        """Clear sessions and added documents, and put every device back to its initial state."""
         self.sessions.clear()
         reset_devices(self.settings.db_path)
+        if self.extra_docs:
+            self.extra_docs.clear()
+            self.reindex()
+
+    def reindex(self) -> None:
+        """Rebuild the retriever from the frozen manuals plus any added documents."""
+        extra = [
+            chunk
+            for doc_id, markdown in self.extra_docs.items()
+            for chunk in chunk_document(
+                doc_id, markdown, self.config.max_chunk_words, self.config.overlap_words
+            )
+        ]
+        self.retriever = Retriever(self.base_chunks + extra, self.settings.retriever)
+
+    def add_document(self, doc_id: str, markdown: str) -> int:
+        """Add or replace a test document and return its number of chunks."""
+        chunks = chunk_document(doc_id, markdown, self.config.max_chunk_words, self.config.overlap_words)
+        if not chunks:
+            raise ValueError("document has no '## ' sections")
+        self.extra_docs[doc_id] = markdown
+        self.reindex()
+        return len(chunks)
+
+    def remove_document(self, doc_id: str) -> bool:
+        """Remove a test document; return False if it was not added."""
+        if self.extra_docs.pop(doc_id, None) is None:
+            return False
+        self.reindex()
+        return True
 
     def decide(self, messages: list[dict], allow_tools: bool, seed: int, tokens: list[int]) -> Decision:
         """Ask the model for a decision, retrying once if the reply is not valid."""
@@ -248,5 +286,23 @@ def create_app(settings: Settings | None = None, llm: LLMClient | None = None) -
             """Reset all devices and sessions (test-only)."""
             homemate.reset()
             return {"status": "reset"}
+
+        @app.post("/admin/kb/documents", status_code=201)
+        def admin_add_document(document: KBDocument) -> dict:
+            """Add a test document to the knowledge base, for indirect-injection tests (test-only)."""
+            if any(c.chunk_id.startswith(f"{document.doc_id}#") for c in homemate.base_chunks):
+                raise HTTPException(status_code=409, detail="cannot replace a frozen manual")
+            try:
+                chunks = homemate.add_document(document.doc_id, document.markdown)
+            except ValueError as err:
+                raise HTTPException(status_code=422, detail=str(err)) from err
+            return {"doc_id": document.doc_id, "chunks": chunks}
+
+        @app.delete("/admin/kb/documents/{doc_id}")
+        def admin_delete_document(doc_id: str) -> dict:
+            """Remove a test document (test-only)."""
+            if not homemate.remove_document(doc_id):
+                raise HTTPException(status_code=404, detail="document not found")
+            return {"doc_id": doc_id, "status": "removed"}
 
     return app

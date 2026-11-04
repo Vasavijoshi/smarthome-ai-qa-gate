@@ -8,6 +8,7 @@ from pathlib import Path
 from qa_gate.metrics.deterministic import MetricRow
 
 SCHEMA_PATH = Path(__file__).with_name("schema.sql")
+EXPECTED_CASES = {"golden": 60, "attack": 25, "control": 10}  # cases per suite; results = cases x repeats
 JUDGE_METRICS = {
     "answer": ["faithfulness", "answer_relevancy", "correctness"],
     "correct_premise": ["faithfulness", "correctness"],
@@ -100,14 +101,49 @@ def latest_run_id(conn: sqlite3.Connection) -> str:
     return row["run_id"]
 
 
-def check_golden_counts(conn: sqlite3.Connection, run_id: str, expected_cases: int) -> list[str]:
-    """Exactly cases x repeats golden results, one per case and repeat."""
+def check_suite_counts(conn: sqlite3.Connection, run_id: str, expected: dict[str, int]) -> list[str]:
+    """Every suite present in the run has exactly cases x repeats results (e.g. 180 golden, 75 attack)."""
     repeats = conn.execute("SELECT repeats FROM runs WHERE run_id = ?", (run_id,)).fetchone()["repeats"]
-    count = conn.execute(
-        "SELECT COUNT(*) FROM results WHERE run_id = ? AND suite = 'golden'", (run_id,)
-    ).fetchone()[0]
-    expected = expected_cases * repeats
-    return [] if count == expected else [f"{count} golden results, expected {expected}"]
+    counts = dict(
+        conn.execute("SELECT suite, COUNT(*) FROM results WHERE run_id = ? GROUP BY suite", (run_id,))
+    )
+    if not counts:
+        return ["run has no results"]
+    errors = [f"unexpected suite {s}" for s in counts if s not in expected]
+    return errors + [
+        f"{counts[s]} {s} results, expected {expected[s] * repeats}"
+        for s in counts
+        if s in expected and counts[s] != expected[s] * repeats
+    ]
+
+
+def check_blocked_help_judged(conn: sqlite3.Connection, run_id: str, d5_attacks: set[str]) -> list[str]:
+    """Every attempt of an attack that uses D5 has a D5 verdict (the judge pass has run)."""
+    missing = conn.execute(
+        f"""SELECT r.case_id, r.repeat_idx FROM results r
+            WHERE r.run_id = ? AND r.suite = 'attack' AND r.case_id IN ({", ".join("?" * len(d5_attacks))})
+              AND NOT EXISTS (SELECT 1 FROM safety_results s
+                              WHERE s.result_id = r.result_id AND s.detector = 'D5')""",
+        (run_id, *sorted(d5_attacks)),
+    ).fetchall()
+    return [f"{row['case_id']} repeat {row['repeat_idx']}: no D5 verdict" for row in missing]
+
+
+def add_safety_result(
+    conn: sqlite3.Connection, result_id: int, item: dict, detector: str, succeeded: bool, evidence: str
+) -> None:
+    """Insert one detector verdict for an attack or control attempt."""
+    conn.execute(
+        "INSERT INTO safety_results VALUES (?, ?, ?, ?, ?, ?, ?)",
+        (result_id, item["id"], item["category"], item["severity"], succeeded, detector, evidence),
+    )
+    conn.commit()
+
+
+def mark_failed(conn: sqlite3.Connection, result_id: int) -> None:
+    """Set a result to not passed (for example after a late D5 verdict)."""
+    conn.execute("UPDATE results SET passed = 0 WHERE result_id = ?", (result_id,))
+    conn.commit()
 
 
 def check_orphans(conn: sqlite3.Connection) -> list[str]:
@@ -176,14 +212,20 @@ def check_run_row(conn: sqlite3.Connection, run_id: str) -> list[str]:
     return [f"run has no {key}" for key in ("dataset_hash", "config_hash", "repeats") if not row[key]]
 
 
-def validate_run(conn: sqlite3.Connection, run_id: str, expected_cases: int = 60) -> list[str]:
-    """Post-run data validation (6.6.2, golden part); marks the run valid or invalid."""
+def validate_run(
+    conn: sqlite3.Connection,
+    run_id: str,
+    expected: dict[str, int] | None = None,
+    d5_attacks: set[str] | None = None,
+) -> list[str]:
+    """Post-run data validation (6.6.2) for the suites in the run; marks the run valid or invalid."""
     errors = (
         check_run_row(conn, run_id)
-        + check_golden_counts(conn, run_id, expected_cases)
+        + check_suite_counts(conn, run_id, expected or EXPECTED_CASES)
         + check_orphans(conn)
         + check_judge_scores(conn, run_id)
         + check_ranges(conn, run_id)
+        + (check_blocked_help_judged(conn, run_id, d5_attacks) if d5_attacks else [])
     )
     conn.execute("UPDATE runs SET status = ? WHERE run_id = ?", ("invalid" if errors else "valid", run_id))
     conn.commit()

@@ -36,3 +36,15 @@ class HomeMateClient:
     def reset(self) -> None:
         """Reset devices and sessions (needs ENABLE_TEST_ADMIN=1 on the server)."""
         self.http.post("/admin/reset").raise_for_status()
+
+    def add_document(self, doc_id: str, markdown: str) -> None:
+        """Add a test document to the knowledge base (needs ENABLE_TEST_ADMIN=1)."""
+        self.http.post(
+            "/admin/kb/documents", json={"doc_id": doc_id, "markdown": markdown}
+        ).raise_for_status()
+
+    def delete_document(self, doc_id: str) -> None:
+        """Remove a test document; a missing document is not an error."""
+        response = self.http.delete(f"/admin/kb/documents/{doc_id}")
+        if response.status_code != 404:
+            response.raise_for_status()

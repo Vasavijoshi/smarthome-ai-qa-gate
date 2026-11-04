@@ -11,7 +11,16 @@ from pathlib import Path
 
 from pydantic import ValidationError
 
-from qa_gate.datasets.loader import REPO_ROOT, GoldenCase, load_raw
+from qa_gate.config import load_eval_config
+from qa_gate.datasets.loader import (
+    ATTACKS_PATH,
+    CONTROLS_PATH,
+    REPO_ROOT,
+    Attack,
+    Control,
+    GoldenCase,
+    load_raw,
+)
 from qa_gate.metrics.deterministic import normalise, phrase_in_normalised
 
 # The framework reads the manuals as files; it never imports assistant code.
@@ -170,12 +179,125 @@ def dataset_hash(raw_cases: list[dict]) -> str:
     return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
 
 
+ATTACK_COUNTS = {
+    "direct_injection": 6,
+    "indirect_injection": 4,
+    "jailbreak": 5,
+    "pii_leak": 5,
+    "blocked_topic": 5,
+}
+ATTACK_SEVERITY = {
+    "direct_injection": "high",
+    "indirect_injection": "critical",
+    "jailbreak": "high",
+    "pii_leak": "critical",
+    "blocked_topic": "medium",
+}
+ATTACK_SMOKE_COUNTS = {
+    "direct_injection": 2,
+    "indirect_injection": 1,
+    "jailbreak": 2,
+    "pii_leak": 2,
+    "blocked_topic": 1,
+}
+ALLOWED_DETECTORS = {  # report 6.4.4, "Used for" column
+    "direct_injection": {"D2"},
+    "indirect_injection": {"D1", "D4"},
+    "jailbreak": {"D2", "D4", "D5"},
+    "pii_leak": {"D3"},
+    "blocked_topic": {"D5"},
+}
+CONTROL_COUNT = 10
+
+
+def parse_items(raw_items: list[dict], model: type) -> tuple[list, list[str]]:
+    """Parse raw dicts with a Pydantic model, collecting schema errors."""
+    items, errors = [], []
+    for i, raw in enumerate(raw_items):
+        try:
+            items.append(model.model_validate(raw))
+        except ValidationError as err:
+            fields = ", ".join(f"{'.'.join(map(str, e['loc']))}: {e['msg']}" for e in err.errors())
+            errors.append(f"{raw.get('id', f'#{i}')}: {fields}")
+    return items, errors
+
+
+def check_attack_counts(attacks: list[Attack]) -> list[str]:
+    """Unique ids, 25 attacks in the 6.4.2 mix, and the 8-attack smoke subset."""
+    errors = [f"duplicate id {i}" for i, n in Counter(a.id for a in attacks).items() if n > 1]
+    actual = dict(Counter(a.category for a in attacks))
+    if actual != ATTACK_COUNTS:
+        errors.append(f"attack counts {actual} differ from {ATTACK_COUNTS}")
+    smoke = dict(Counter(a.category for a in attacks if a.smoke))
+    if smoke != ATTACK_SMOKE_COUNTS:
+        errors.append(f"attack smoke counts {smoke} differ from {ATTACK_SMOKE_COUNTS}")
+    return errors
+
+
+def check_attack(attack: Attack, topics: set[str], kb_text: str) -> list[str]:
+    """Severity, detectors, turns, poisoned document, canary and topic rules for one attack."""
+    errors = []
+    if attack.severity != ATTACK_SEVERITY[attack.category]:
+        errors.append(f"severity must be {ATTACK_SEVERITY[attack.category]}")
+    if not attack.detectors or not set(attack.detectors) <= ALLOWED_DETECTORS[attack.category]:
+        errors.append(f"detectors must be a non-empty subset of {sorted(ALLOWED_DETECTORS[attack.category])}")
+    if not attack.turns or not all(t.strip() for t in attack.turns):
+        errors.append("needs at least one non-empty turn")
+    if (attack.category == "indirect_injection") != (attack.poisoned_doc is not None):
+        errors.append("poisoned_doc is required for indirect injection and only there")
+    if attack.poisoned_doc is not None and "\n## " not in attack.poisoned_doc:
+        errors.append("poisoned_doc needs a '## ' section")
+    if "D1" in attack.detectors and not (attack.canary and attack.canary in (attack.poisoned_doc or "")):
+        errors.append("D1 needs a canary that appears in the poisoned document")
+    if attack.setup and not (attack.canary and any(attack.canary in m for m in attack.setup)):
+        errors.append("a cross-session setup must plant the canary")
+    if attack.canary and attack.canary.lower() in kb_text:
+        errors.append(f"canary {attack.canary} already appears in the knowledge base")
+    if "D5" in attack.detectors and attack.topic not in topics:
+        errors.append(f"D5 needs a topic from eval.yaml {sorted(topics)}")
+    return [f"{attack.id}: {e}" for e in errors]
+
+
+def validate_attacks(raw_attacks: list[dict], topics: set[str], kb_dir: Path = KB_DIR) -> list[str]:
+    """Run every attack check and return all error messages (empty means valid)."""
+    attacks, errors = parse_items(raw_attacks, Attack)
+    if errors:
+        return errors
+    canaries = [a.canary for a in attacks if a.canary]
+    errors += [f"canary {c} is used twice" for c, n in Counter(canaries).items() if n > 1]
+    kb_text = read_kb(kb_dir)[1]
+    errors += check_attack_counts(attacks)
+    for attack in attacks:
+        errors += check_attack(attack, topics, kb_text)
+    return errors
+
+
+def validate_controls(raw_controls: list[dict]) -> list[str]:
+    """Exactly 10 benign controls with unique ids and non-empty questions."""
+    controls, errors = parse_items(raw_controls, Control)
+    if errors:
+        return errors
+    errors = [f"duplicate id {i}" for i, n in Counter(c.id for c in controls).items() if n > 1]
+    if len(controls) != CONTROL_COUNT:
+        errors.append(f"{len(controls)} controls, expected {CONTROL_COUNT}")
+    return errors + [f"{c.id}: empty question" for c in controls if not c.question.strip()]
+
+
+def run_dataset_hash(datasets: dict[str, list[dict]]) -> str:
+    """One hash over every dataset a run uses (golden, attacks, controls); stored as runs.dataset_hash."""
+    return dataset_hash([{name: datasets[name]} for name in sorted(datasets)])
+
+
 def main() -> int:
     """Validate data/golden_set.yaml, print the result and return an exit code."""
     raw = load_raw()
+    attacks, controls = load_raw(ATTACKS_PATH), load_raw(CONTROLS_PATH)
     errors = validate(raw)
     review = warnings(raw)
-    for error in errors:
+    safety_errors = validate_attacks(attacks, set(load_eval_config().blocked_topics)) + validate_controls(
+        controls
+    )
+    for error in errors + safety_errors:
         print(f"ERROR {error}")
     for warning in review:
         print(f"WARNING {warning}")
@@ -183,7 +305,10 @@ def main() -> int:
         f"{len(raw)} golden cases, {len(errors)} errors, {len(review)} warnings, "
         f"dataset hash {dataset_hash(raw)[:12]}"
     )
-    return 1 if errors else 0
+    print(f"{len(attacks)} attacks and {len(controls)} controls, {len(safety_errors)} errors")
+    combined = run_dataset_hash({"golden": raw, "attacks": attacks, "controls": controls})
+    print(f"run dataset hash {combined[:12]}")
+    return 1 if errors or safety_errors else 0
 
 
 if __name__ == "__main__":
