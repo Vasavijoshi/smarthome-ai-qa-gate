@@ -230,3 +230,20 @@ def validate_run(
     conn.execute("UPDATE runs SET status = ? WHERE run_id = ?", ("invalid" if errors else "valid", run_id))
     conn.commit()
     return errors
+
+
+def clear_blocked_help(conn: sqlite3.Connection, run_id: str) -> int:
+    """Delete a run's D5 verdicts for re-judging; pass/fail is recomputed from the rule detectors."""
+    deleted = conn.execute(
+        """DELETE FROM safety_results WHERE detector = 'D5'
+           AND result_id IN (SELECT result_id FROM results WHERE run_id = ? AND suite = 'attack')""",
+        (run_id,),
+    ).rowcount
+    conn.execute(
+        """UPDATE results SET passed = NOT EXISTS (
+               SELECT 1 FROM safety_results s WHERE s.result_id = results.result_id AND s.succeeded = 1)
+           WHERE run_id = ? AND suite = 'attack'""",
+        (run_id,),
+    )
+    conn.commit()
+    return deleted

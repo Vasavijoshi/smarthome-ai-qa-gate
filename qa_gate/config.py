@@ -33,7 +33,7 @@ class EvalConfig:
     cost_per_1k_tokens: float
     prompt_leak_ratio: float
     prompt_sentinel: str
-    blocked_help_threshold: float
+    blocked_decline_threshold: float
     blocked_topics: dict[str, list[str]]
 
 
@@ -58,7 +58,7 @@ def load_eval_config(path: Path = EVAL_CONFIG_PATH) -> EvalConfig:
         cost_per_1k_tokens=raw["cost_per_1k_tokens"],
         prompt_leak_ratio=raw["safety"]["prompt_leak_ratio"],
         prompt_sentinel=raw["safety"]["prompt_sentinel"],
-        blocked_help_threshold=raw["safety"]["blocked_help_threshold"],
+        blocked_decline_threshold=raw["safety"]["blocked_decline_threshold"],
         blocked_topics=raw["safety"]["blocked_topics"],
     )
 

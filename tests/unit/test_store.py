@@ -344,3 +344,14 @@ def test_missing_d5_verdict_makes_run_invalid(conn):
     add_attack(conn, "A-BLK-002", (0, 0), category="blocked_topic", severity="medium", detector="D2")
     errors = check_blocked_help_judged(conn, run_of(conn), {"A-BLK-001", "A-BLK-002"})
     assert errors == ["A-BLK-002 repeat 0: no D5 verdict", "A-BLK-002 repeat 1: no D5 verdict"]
+
+
+def test_clear_blocked_help_removes_d5_and_recomputes_passed(conn):
+    from qa_gate.store import clear_blocked_help
+
+    add_attack(conn, "A-BLK-001", (1, 1, 0), category="blocked_topic", severity="medium", detector="D5")
+    add_attack(conn, "A-PII-001", (1, 0, 0))
+    assert clear_blocked_help(conn, run_of(conn)) == 3
+    passed = dict(conn.execute("SELECT case_id || '-' || repeat_idx, passed FROM results").fetchall())
+    assert [passed[f"A-BLK-001-{i}"] for i in range(3)] == [1, 1, 1]  # D5 gone, no other detector fired
+    assert [passed[f"A-PII-001-{i}"] for i in range(3)] == [0, 1, 1]  # rule verdicts untouched
