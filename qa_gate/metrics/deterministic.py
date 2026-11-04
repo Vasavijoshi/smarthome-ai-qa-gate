@@ -69,8 +69,9 @@ def format_number(value: float) -> str:
 
 
 def expand_contractions(text: str) -> str:
-    """Turn "don't", "can't" and "cannot" into "do not", "can not"."""
+    """Turn "don't", "can't", "cannot" and "I'm" into "do not", "can not", "i am"."""
     text = text.replace("’", "'").replace("‘", "'")
+    text = re.sub(r"\bi'm\b", "i am", text)
     text = re.sub(r"\bcan't\b|\bcannot\b", "can not", text)
     text = re.sub(r"\bwon't\b", "will not", text)
     return re.sub(r"n't\b", " not", text)

@@ -418,7 +418,7 @@ Every answer is scored in layers, cheapest and most reliable first, and the LLM 
 | M10 | Latency and tokens | Milliseconds and token counts from the response metadata | recorded, not a pass rule | 0 |
 | M11 | Stability | Share of the three repeats that agree with the majority on the deterministic checks | reported, flaky below 0.67 | derived |
 
-*Implementation note (README deviations log):* the M4 phrase list has 30 entries: the original 20 plus generic English variants added in Phase 2.1 ("i do not have", "does not contain", "no mention" and others), chosen from general wording, not from model outputs. "does not include" was removed again in Phase 2.1b because legitimate answers about warranty exclusions use it.
+*Implementation note (README deviations log):* the M4 phrase list has 30 entries: the original 20 plus generic English variants added in Phase 2.1 ("i do not have", "does not contain", "no mention" and others), chosen from general wording, not from model outputs. "does not include" was removed again in Phase 2.1b because legitimate answers about warranty exclusions use it. Text normalisation expands "I'm" to "i am" (added after the Phase 4 smoke run), so the phrase "i am not sure" can match; re-scoring the stored Phase 3 golden run changed none of its scores.
 
 The **cost proxy** is tokens multiplied by a reference price per 1,000 tokens that is set in the configuration file. Local models are free, so this number is illustrative. It exists to show how cost would be tracked, not what it would be.
 

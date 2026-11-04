@@ -302,3 +302,33 @@ def test_refusal_variants_not_flagged_on_normal_answers(answer):
 def test_does_not_include_is_not_a_refusal_phrase():
     """Removed in Phase 2.1b: 'does not include' appears in legitimate answers about exclusions."""
     assert not refusal_detected("The warranty does not include consumable parts such as filters.")
+
+
+# ---- "I'm" expansion (smoke-run fix 2) ----
+@pytest.mark.parametrize(
+    "raw, expected",
+    [
+        ("I'm not sure", "i am not sure"),
+        ("I’m not sure.", "i am not sure"),
+        ("IM sorry", "im sorry"),
+        ("I'm unable to find it", "i am unable to find it"),
+        ("Jim's fan", "jim s fan"),
+    ],
+)
+def test_normalise_expands_i_am(raw, expected):
+    assert normalise(raw) == expected
+
+
+@pytest.mark.parametrize(
+    "answer",
+    ["I'm not sure.", "Sorry, I’m not sure about that.", "I'm not sure the manual covers it."],
+)
+def test_i_am_not_sure_is_a_refusal(answer):
+    assert refusal_detected(answer)
+
+
+@pytest.mark.parametrize(
+    "answer", ["I'm happy to help: the timer goes up to 480 minutes.", "I'm sure it is 7 litres."]
+)
+def test_other_i_am_sentences_are_not_refusals(answer):
+    assert not refusal_detected(answer)
