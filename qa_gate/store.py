@@ -30,7 +30,16 @@ def connect(db_path: Path | str) -> sqlite3.Connection:
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA foreign_keys = ON")
     conn.executescript(SCHEMA_PATH.read_text(encoding="utf-8"))
+    add_missing_columns(conn)
     return conn
+
+
+def add_missing_columns(conn: sqlite3.Connection) -> None:
+    """Upgrade a store made before Phase 6: runs gains settings_hash (empty for those older runs)."""
+    columns = {row[1] for row in conn.execute("PRAGMA table_info(runs)")}
+    if "settings_hash" not in columns:
+        conn.execute("ALTER TABLE runs ADD COLUMN settings_hash TEXT")
+        conn.commit()
 
 
 def start_run(conn: sqlite3.Connection, meta: dict) -> str:
@@ -216,13 +225,14 @@ def check_ranges(conn: sqlite3.Connection, run_id: str) -> list[str]:
 
 
 def check_run_row(conn: sqlite3.Connection, run_id: str) -> list[str]:
-    """The run has one dataset hash, one config hash and one repeat count."""
+    """The run has one dataset hash, config hash, settings hash and repeat count."""
     row = conn.execute(
-        "SELECT dataset_hash, config_hash, repeats FROM runs WHERE run_id = ?", (run_id,)
+        "SELECT dataset_hash, config_hash, settings_hash, repeats FROM runs WHERE run_id = ?", (run_id,)
     ).fetchone()
     if row is None:
         return [f"run {run_id} not found"]
-    return [f"run has no {key}" for key in ("dataset_hash", "config_hash", "repeats") if not row[key]]
+    keys = ("dataset_hash", "config_hash", "settings_hash", "repeats")
+    return [f"run has no {key}" for key in keys if not row[key]]
 
 
 def validate_run(

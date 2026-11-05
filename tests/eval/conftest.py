@@ -8,7 +8,7 @@ from pathlib import Path
 import pytest
 
 from qa_gate.client import HomeMateClient
-from qa_gate.config import EvalConfig, judged_case_ids, load_eval_config, version_config_hash
+from qa_gate.config import EvalConfig, judged_case_ids, load_eval_config, settings_hash, version_config_hash
 from qa_gate.datasets.loader import (
     ATTACKS_PATH,
     CONTROLS_PATH,
@@ -78,6 +78,7 @@ def eval_run() -> EvalRun:
             "dataset_hash": combined_hash,
             "kb_version": health["kb_version"],
             "config_hash": version_config_hash(health["version"]),
+            "settings_hash": settings_hash(),  # eval.yaml + rubrics: the gate refuses runs that differ
             "git_commit": git_commit(),
             "repeats": len(config.seeds),
         },

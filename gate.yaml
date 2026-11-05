@@ -21,7 +21,8 @@ gate:
   judge_margin_factor: from_calibration   # 1.0, 2.0, or advisory
 
 # Addition (Phase 3 deviation): full and sampled runs are never compared.
-extra_comparable_on: [judge_scope]
+# Addition (Phase 6, before R1): runs made with different eval.yaml settings or rubric files are never compared.
+extra_comparable_on: [judge_scope, settings_hash]
 
 # Addition: response validity (M1) is checked on the golden suite, where 6.3.2 defines M1.
 # Per-suite response validity is printed in every report as information only.

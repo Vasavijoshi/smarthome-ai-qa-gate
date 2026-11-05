@@ -1,6 +1,7 @@
 """Evaluation settings from eval.yaml, the judged-case selection, and version config hashes."""
 
 import hashlib
+import json
 import random
 from dataclasses import dataclass
 from pathlib import Path
@@ -13,6 +14,7 @@ EVAL_CONFIG_PATH = REPO_ROOT / "eval.yaml"
 # The framework reads version files from disk; it never imports assistant code.
 VERSIONS_DIR = REPO_ROOT / "assistant" / "versions"
 PROMPTS_DIR = REPO_ROOT / "assistant" / "prompts"
+RUBRIC_DIR = REPO_ROOT / "qa_gate" / "metrics"
 
 
 @dataclass(frozen=True)
@@ -105,3 +107,15 @@ def version_prompt_text(
     version_file = versions_dir / f"{version}.yaml"
     prompt_name = yaml.safe_load(version_file.read_text(encoding="utf-8"))["prompt_file"]
     return (prompts_dir / prompt_name).read_text(encoding="utf-8")
+
+
+def settings_hash(eval_path: Path = EVAL_CONFIG_PATH, rubric_dir: Path = RUBRIC_DIR) -> str:
+    """SHA-256 of the evaluation settings: eval.yaml (parsed, so comments do not count) and the rubrics."""
+    settings = {
+        "eval.yaml": yaml.safe_load(eval_path.read_text(encoding="utf-8")),
+        "rubrics": {
+            p.name: p.read_text(encoding="utf-8").replace("\r\n", "\n")
+            for p in sorted(rubric_dir.glob("rubric_*.txt"))
+        },
+    }
+    return hashlib.sha256(json.dumps(settings, sort_keys=True, ensure_ascii=False).encode()).hexdigest()

@@ -738,7 +738,7 @@ The gate compares a candidate snapshot with a baseline snapshot and returns PASS
 5. **Supporting statistics.** The gate lists the cases that flipped from pass to fail (b) and from fail to pass (c), and reports the exact two-sided sign-test p-value for b against c. This is information for the reader, not a decision rule, because the sample is small.
 6. **Verdict and report.** Any tripped rule means FAIL (exit code 1). The gate writes a Markdown report, a JSON report and a row in `gate_decisions`.
 
-*Implementation note (README deviations log):* comparability also requires the same `judge_scope` (a Phase 3 addition), and a missing gated metric is INCOMPARABLE too. Response validity (the absolute rule) is checked on the golden suite, where 6.3.2 defines M1; every report also prints response validity per suite as information. A relative rule trips only when the candidate is worse by strictly more than the margin. p95 latency is the golden suite's per-turn p95. The sign test covers every per-case outcome in all five suites. Until the judge is calibrated (Phase 9) the judge margin factor is 1.0 and judge-based rule results are marked provisional; the gate will be re-run on the stored snapshots with the calibrated factor. Each report records the git commit of `gate.yaml`.
+*Implementation note (README deviations log):* comparability also requires the same `judge_scope` (a Phase 3 addition) and the same `settings_hash` (a hash of `eval.yaml` and every rubric file, stored per run; added before R1 so that runs made with different thresholds, keyword hints or rubrics are never compared), and a missing gated metric is INCOMPARABLE too. Response validity (the absolute rule) is checked on the golden suite, where 6.3.2 defines M1; every report also prints response validity per suite as information. A relative rule trips only when the candidate is worse by strictly more than the margin. p95 latency is the golden suite's per-turn p95. The sign test covers every per-case outcome in all five suites. Until the judge is calibrated (Phase 9) the judge margin factor is 1.0 and judge-based rule results are marked provisional; the gate will be re-run on the stored snapshots with the calibrated factor. Each report records the git commit of `gate.yaml`.
 
 #### 6.7.2 Margins
 
@@ -759,7 +759,7 @@ Margins are fixed in `gate.yaml` before the experiment (6.8). The last column sh
 
 The gate can only see changes larger than these margins. Smaller drifts are invisible to it. This is a known limit and is reported in Chapter 10.
 
-*Implementation note (README deviations log):* `gate.yaml` holds the YAML below word for word, plus marked additions: `extra_comparable_on: [judge_scope]`, `response_validity_suite: golden`, the list of judge-based metrics (case pass rate, hallucination rate, failure-to-abstain rate, ASR worst of three, false-success-claim rate) and the path of the calibration result. It was committed before R1.
+*Implementation note (README deviations log):* `gate.yaml` holds the YAML below word for word, plus marked additions: `extra_comparable_on: [judge_scope, settings_hash]`, `response_validity_suite: golden`, the list of judge-based metrics (case pass rate, hallucination rate, failure-to-abstain rate, ASR worst of three, false-success-claim rate) and the path of the calibration result. It was committed before R1.
 
 ```yaml
 gate:

@@ -118,3 +118,67 @@ def test_config_hash_ignores_line_endings(version_copy):
     assert version_config_hash(
         "v1.0", version_copy / "versions", version_copy / "prompts"
     ) == version_config_hash("v1.0")
+
+
+# ---- settings hash (eval.yaml + rubrics; added before R1) ----
+from qa_gate.config import RUBRIC_DIR, settings_hash  # noqa: E402
+
+
+@pytest.fixture
+def settings_copy(tmp_path):
+    """Writable copies of eval.yaml and the rubric folder."""
+    shutil.copy(EVAL_CONFIG_PATH, tmp_path / "eval.yaml")
+    (tmp_path / "rubrics").mkdir()
+    for rubric in RUBRIC_DIR.glob("rubric_*.txt"):
+        shutil.copy(rubric, tmp_path / "rubrics" / rubric.name)
+    return tmp_path
+
+
+def hash_of(folder) -> str:
+    """Settings hash of a copied folder."""
+    return settings_hash(folder / "eval.yaml", folder / "rubrics")
+
+
+def test_settings_hash_of_a_copy_matches(settings_copy):
+    assert hash_of(settings_copy) == settings_hash()
+
+
+@pytest.mark.parametrize(
+    "old, new",
+    [
+        ("fact_coverage: 0.8", "fact_coverage: 0.7"),
+        ("blocked_decline_threshold: 0.5", "blocked_decline_threshold: 0.6"),
+        ("prompt_leak_run_words: 12", "prompt_leak_run_words: 10"),
+        ("seeds: [11, 22, 33]", "seeds: [11, 22, 34]"),
+        ("model: qwen2.5:7b", "model: qwen2.5:3b"),
+    ],
+)
+def test_settings_hash_changes_with_any_setting(settings_copy, old, new):
+    path = settings_copy / "eval.yaml"
+    text = path.read_text(encoding="utf-8")
+    assert old in text
+    path.write_text(text.replace(old, new), encoding="utf-8")
+    assert hash_of(settings_copy) != settings_hash()
+
+
+@pytest.mark.parametrize(
+    "rubric",
+    ["rubric_correctness.txt", "rubric_refusal.txt", "rubric_blocked_help.txt", "rubric_success_claim.txt"],
+)
+def test_settings_hash_changes_with_any_rubric(settings_copy, rubric):
+    path = settings_copy / "rubrics" / rubric
+    path.write_text(path.read_text(encoding="utf-8") + "One more step.\n", encoding="utf-8")
+    assert hash_of(settings_copy) != settings_hash()
+
+
+def test_settings_hash_ignores_comments_and_line_endings(settings_copy):
+    path = settings_copy / "eval.yaml"
+    path.write_bytes(("# a new comment\n" + path.read_text(encoding="utf-8")).replace("\n", "\r\n").encode())
+    rubric = settings_copy / "rubrics" / "rubric_refusal.txt"
+    rubric.write_bytes(rubric.read_bytes().replace(b"\r\n", b"\n").replace(b"\n", b"\r\n"))
+    assert hash_of(settings_copy) == settings_hash()
+
+
+def test_new_rubric_file_changes_the_hash(settings_copy):
+    (settings_copy / "rubrics" / "rubric_new.txt").write_text("A new rubric.\n", encoding="utf-8")
+    assert hash_of(settings_copy) != settings_hash()

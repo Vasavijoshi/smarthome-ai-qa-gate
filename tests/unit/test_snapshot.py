@@ -20,6 +20,7 @@ RUN_META = {
     "dataset_hash": "d",
     "kb_version": "k",
     "config_hash": "c",
+    "settings_hash": "s",
     "git_commit": "g",
     "repeats": 3,
 }

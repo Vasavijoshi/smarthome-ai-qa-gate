@@ -10,6 +10,7 @@ CREATE TABLE IF NOT EXISTS runs (
     dataset_hash      TEXT NOT NULL,
     kb_version        TEXT NOT NULL,
     config_hash       TEXT NOT NULL,
+    settings_hash     TEXT,  -- eval.yaml + rubrics; NULL only for runs made before Phase 6
     git_commit        TEXT NOT NULL,
     repeats           INTEGER NOT NULL,
     started_at        TEXT NOT NULL,

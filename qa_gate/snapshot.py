@@ -19,7 +19,7 @@ BASELINE_PATH = REPO_ROOT / "baselines" / "baseline.json"
 SCHEMA_VERSION = 1
 RUN_FIELDS = [
     "run_id", "assistant_version", "model", "judge_model", "judge_scope", "dataset_hash", "kb_version",
-    "config_hash", "git_commit", "repeats", "status", "started_at", "finished_at",
+    "config_hash", "settings_hash", "git_commit", "repeats", "status", "started_at", "finished_at",
 ]  # fmt: skip
 
 

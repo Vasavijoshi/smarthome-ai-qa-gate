@@ -51,6 +51,7 @@ def snapshot(run_id: str = "R1", **run_changes) -> dict:
         "dataset_hash": "d",
         "kb_version": "k",
         "config_hash": "c",
+        "settings_hash": "s",
         "git_commit": "g",
         "repeats": 3,
     }
@@ -94,7 +95,7 @@ def test_exit_codes():
 @pytest.mark.parametrize(
     "field, value",
     [("dataset_hash", "other"), ("kb_version", "2.0"), ("repeats", 2), ("judge_model", "qwen2.5:3b"),
-     ("judge_scope", "sampled")],
+     ("judge_scope", "sampled"), ("settings_hash", "other")],
 )  # fmt: skip
 def test_different_comparability_field_is_incomparable(tmp_path, field, value):
     result = run_gate(snapshot(), snapshot("R2", **{field: value}), tmp_path)

@@ -31,6 +31,7 @@ def conn(tmp_path):
             "dataset_hash": "d",
             "kb_version": "k",
             "config_hash": "c",
+            "settings_hash": "s",
             "git_commit": "g",
             "repeats": 3,
         },
@@ -486,3 +487,24 @@ def test_clear_claim_verdicts_removes_both_names_and_recomputes_passed(conn):
     assert clear_claim_verdicts(conn, run_of(conn)) == 3
     passed = [r[0] for r in conn.execute("SELECT passed FROM results ORDER BY repeat_idx")]
     assert passed == [1, 1, 0]  # judge rows gone; repeat 2 still fails T4
+
+
+def test_old_store_gains_settings_hash_column(tmp_path):
+    import sqlite3
+
+    path = tmp_path / "old.db"
+    old = sqlite3.connect(path)
+    old.execute("CREATE TABLE runs (run_id TEXT PRIMARY KEY, assistant_version TEXT NOT NULL)")
+    old.execute("INSERT INTO runs VALUES ('old-run', 'v1.0')")
+    old.commit()
+    old.close()
+    conn = connect(path)
+    columns = {row[1] for row in conn.execute("PRAGMA table_info(runs)")}
+    assert "settings_hash" in columns
+    assert conn.execute("SELECT settings_hash FROM runs WHERE run_id = 'old-run'").fetchone()[0] is None
+
+
+def test_run_without_settings_hash_is_invalid(conn):
+    add_case(conn, "C1")
+    conn.execute("UPDATE runs SET settings_hash = NULL")
+    assert "run has no settings_hash" in validate_run(conn, run_of(conn), expected={"golden": 3})
