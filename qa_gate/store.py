@@ -8,7 +8,8 @@ from pathlib import Path
 from qa_gate.metrics.deterministic import MetricRow
 
 SCHEMA_PATH = Path(__file__).with_name("schema.sql")
-EXPECTED_CASES = {"golden": 60, "attack": 25, "control": 10}  # cases per suite; results = cases x repeats
+# Expected results per suite in a full run (report 6.6.2); scenarios run 2 repeats, the others 3.
+EXPECTED_RESULTS = {"golden": 180, "attack": 75, "control": 30, "tool": 69, "scenario": 20}
 JUDGE_METRICS = {
     "answer": ["faithfulness", "answer_relevancy", "correctness"],
     "correct_premise": ["faithfulness", "correctness"],
@@ -102,8 +103,7 @@ def latest_run_id(conn: sqlite3.Connection) -> str:
 
 
 def check_suite_counts(conn: sqlite3.Connection, run_id: str, expected: dict[str, int]) -> list[str]:
-    """Every suite present in the run has exactly cases x repeats results (e.g. 180 golden, 75 attack)."""
-    repeats = conn.execute("SELECT repeats FROM runs WHERE run_id = ?", (run_id,)).fetchone()["repeats"]
+    """Every suite present in the run has exactly its expected number of results (report 6.6.2)."""
     counts = dict(
         conn.execute("SELECT suite, COUNT(*) FROM results WHERE run_id = ? GROUP BY suite", (run_id,))
     )
@@ -111,10 +111,23 @@ def check_suite_counts(conn: sqlite3.Connection, run_id: str, expected: dict[str
         return ["run has no results"]
     errors = [f"unexpected suite {s}" for s in counts if s not in expected]
     return errors + [
-        f"{counts[s]} {s} results, expected {expected[s] * repeats}"
+        f"{counts[s]} {s} results, expected {expected[s]}"
         for s in counts
-        if s in expected and counts[s] != expected[s] * repeats
+        if s in expected and counts[s] != expected[s]
     ]
+
+
+def check_honesty_judged(conn: sqlite3.Connection, run_id: str) -> list[str]:
+    """Every injected-failure attempt has a T6 judge verdict (the judge pass has run)."""
+    missing = conn.execute(
+        """SELECT r.case_id, r.repeat_idx FROM results r
+           JOIN metric_scores m ON m.result_id = r.result_id AND m.metric = 'T6_no_success_phrase'
+           WHERE r.run_id = ? AND r.suite = 'tool'
+             AND NOT EXISTS (SELECT 1 FROM metric_scores j
+                             WHERE j.result_id = r.result_id AND j.metric = 'T6_honest_judge')""",
+        (run_id,),
+    ).fetchall()
+    return [f"{row['case_id']} repeat {row['repeat_idx']}: no T6 judge verdict" for row in missing]
 
 
 def check_blocked_help_judged(conn: sqlite3.Connection, run_id: str, d5_attacks: set[str]) -> list[str]:
@@ -221,11 +234,12 @@ def validate_run(
     """Post-run data validation (6.6.2) for the suites in the run; marks the run valid or invalid."""
     errors = (
         check_run_row(conn, run_id)
-        + check_suite_counts(conn, run_id, expected or EXPECTED_CASES)
+        + check_suite_counts(conn, run_id, expected or EXPECTED_RESULTS)
         + check_orphans(conn)
         + check_judge_scores(conn, run_id)
         + check_ranges(conn, run_id)
         + (check_blocked_help_judged(conn, run_id, d5_attacks) if d5_attacks else [])
+        + check_honesty_judged(conn, run_id)
     )
     conn.execute("UPDATE runs SET status = ? WHERE run_id = ?", ("invalid" if errors else "valid", run_id))
     conn.commit()

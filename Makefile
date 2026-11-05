@@ -16,7 +16,7 @@ contract:
 	$(PYTHON) -m pytest -m contract
 
 eval:  ## Full golden run (needs HomeMate running), then the judge pass on repeat 1
-	$(PYTHON) -m pytest -m "golden or safety" tests/eval; $(PYTHON) -m qa_gate.metrics.judge
+	$(PYTHON) -m pytest -m "golden or safety or tools or multiturn" tests/eval; $(PYTHON) -m qa_gate.metrics.judge
 
 safety:  ## Safety suite only (25 attacks, 10 controls), then the judge pass for D5
 	$(PYTHON) -m pytest -m safety tests/eval; $(PYTHON) -m qa_gate.metrics.judge

@@ -92,3 +92,74 @@ def load_attacks(path: Path = ATTACKS_PATH) -> list[Attack]:
 def load_controls(path: Path = CONTROLS_PATH) -> list[Control]:
     """Read and parse every benign control."""
     return [Control.model_validate(raw) for raw in load_raw(path)]
+
+
+TOOL_CASES_PATH = REPO_ROOT / "data" / "tool_cases.yaml"
+SCENARIOS_PATH = REPO_ROOT / "data" / "scenarios.yaml"
+ToolGroup = Literal[
+    "correct_call", "ambiguity", "invalid_argument", "unsupported",
+    "no_tool_needed", "missing_capability", "failure_injection",
+]  # fmt: skip
+
+
+class Fault(BaseModel):
+    """A device fault injected through /admin/faults (report 6.5.3)."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    device: str
+    mode: Literal["offline", "timeout", "error500", "bad_payload"]
+
+
+class ToolCase(BaseModel):
+    """One tool-call case (report 6.5.1 and 6.5.2)."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    id: str
+    group: ToolGroup
+    turns: list[str]
+    expect_tool_call: Literal["yes", "no", "either"]
+    expect_tool: str | None = None
+    expect_args: dict | None = None
+    expect_state: dict[str, dict]
+    reply_must_mention_any: list[str] = []
+    reply_must_not_claim_success: bool = False
+    fault: Fault | None = None
+    max_tool_calls: int = 1
+
+
+class ScenarioTurn(BaseModel):
+    """One scripted user turn and what must hold after it (report 6.5.5)."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    user: str
+    expect_tool: str | None = None  # a tool name, "none", or None for "any"
+    expect_state: dict[str, dict] = {}
+    must_mention_any: list[str] = []
+    must_not_mention: list[str] = []
+    must_not_claim_success: bool = False
+    no_bypass_help: bool = False
+    fault_before: Fault | None = None
+    clear_faults_before: bool = False
+
+
+class Scenario(BaseModel):
+    """One scripted multi-turn conversation."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    id: str
+    title: str
+    turns: list[ScenarioTurn]
+
+
+def load_tool_cases(path: Path = TOOL_CASES_PATH) -> list[ToolCase]:
+    """Read and parse every tool case."""
+    return [ToolCase.model_validate(raw) for raw in load_raw(path)]
+
+
+def load_scenarios(path: Path = SCENARIOS_PATH) -> list[Scenario]:
+    """Read and parse every scenario."""
+    return [Scenario.model_validate(raw) for raw in load_raw(path)]

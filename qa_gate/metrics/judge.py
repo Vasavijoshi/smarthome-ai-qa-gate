@@ -17,13 +17,27 @@ import time  # noqa: E402
 from pathlib import Path  # noqa: E402
 
 import httpx  # noqa: E402
-from deepeval.metrics import AnswerRelevancyMetric, FaithfulnessMetric, GEval  # noqa: E402
+from deepeval.metrics import AnswerRelevancyMetric, ConversationalGEval, FaithfulnessMetric, GEval  # noqa: E402
 from deepeval.models import DeepEvalBaseLLM  # noqa: E402
-from deepeval.test_case import LLMTestCase, SingleTurnParams  # noqa: E402
+from deepeval.test_case import (  # noqa: E402
+    ConversationalTestCase,
+    LLMTestCase,
+    MultiTurnParams,
+    SingleTurnParams,
+    Turn,
+)
 from pydantic import BaseModel  # noqa: E402
 
 from qa_gate.config import EvalConfig, load_eval_config  # noqa: E402
-from qa_gate.datasets.loader import Attack, GoldenCase, load_attacks, load_golden  # noqa: E402
+from qa_gate.datasets.loader import (  # noqa: E402
+    Attack,
+    GoldenCase,
+    Scenario,
+    load_attacks,
+    load_golden,
+    load_scenarios,
+    load_tool_cases,
+)
 from qa_gate.metrics.deterministic import MetricRow  # noqa: E402
 from qa_gate.metrics.safety import keyword_hints  # noqa: E402
 from qa_gate.store import (  # noqa: E402
@@ -115,6 +129,21 @@ def build_metric(name: str, judge: OllamaJudge, threshold: float):
             name="BlockedHelpDeclined",
             evaluation_steps=rubric_steps("blocked_help"),
             evaluation_params=params,
+            **common,
+        )
+    if name == "honest_failure":
+        params = [SingleTurnParams.INPUT, SingleTurnParams.ACTUAL_OUTPUT]
+        return GEval(
+            name="HonestFailure",
+            evaluation_steps=rubric_steps("honest_failure"),
+            evaluation_params=params,
+            **common,
+        )
+    if name == "conversation_memory":
+        return ConversationalGEval(
+            name="ConversationMemory",
+            evaluation_steps=rubric_steps("conversation_memory"),
+            evaluation_params=[MultiTurnParams.ROLE, MultiTurnParams.CONTENT],
             **common,
         )
     raise ValueError(f"Unknown judge metric: {name}")
@@ -260,6 +289,94 @@ def judge_blocked_help(conn: sqlite3.Connection, run_id: str, config: EvalConfig
         )
 
 
+def honest_failure_verdict(question: str, reply: str, judge: OllamaJudge, config: EvalConfig) -> MetricRow:
+    """T6 judge part: how honestly a reply reports an injected failure; below threshold = success claim."""
+    threshold = config.honest_failure_threshold
+    metric = build_metric("honest_failure", judge, threshold)
+    metric.measure(LLMTestCase(input=question, actual_output=reply))
+    score = float(metric.score)
+    return MetricRow("T6_honest_judge", score, threshold, score >= threshold, metric.reason or "")
+
+
+def judge_honest_failures(conn: sqlite3.Connection, run_id: str, config: EvalConfig) -> None:
+    """Judge every injected-failure attempt without a T6 verdict; a judge error leaves it pending."""
+    cases = {c.id: c for c in load_tool_cases()}
+    rows = conn.execute(
+        """SELECT r.result_id, r.case_id, r.repeat_idx, r.reply FROM results r
+           JOIN metric_scores m ON m.result_id = r.result_id AND m.metric = 'T6_no_success_phrase'
+           WHERE r.run_id = ? AND r.suite = 'tool'
+             AND NOT EXISTS (SELECT 1 FROM metric_scores j
+                             WHERE j.result_id = r.result_id AND j.metric = 'T6_honest_judge')
+           ORDER BY r.case_id, r.repeat_idx""",
+        (run_id,),
+    ).fetchall()
+    judge = OllamaJudge(config.judge_model, config.judge_temperature, config.judge_seed)
+    for i, row in enumerate(rows, start=1):
+        start = time.perf_counter()
+        try:
+            verdict = honest_failure_verdict(
+                cases[row["case_id"]].turns[-1], row["reply"] or "", judge, config
+            )
+        except Exception as err:  # never record a guess: the run stays invalid until this is judged
+            print(f"[{i}/{len(rows)}] {row['case_id']} repeat {row['repeat_idx']}: judge error {err}")
+            continue
+        add_metrics(conn, row["result_id"], [verdict])
+        if not verdict.passed:
+            mark_failed(conn, row["result_id"])
+        judge_ms = int((time.perf_counter() - start) * 1000)
+        conn.execute(
+            "UPDATE results SET eval_ms = eval_ms + ? WHERE result_id = ?", (judge_ms, row["result_id"])
+        )
+        conn.commit()
+        print(f"[{i}/{len(rows)}] {row['case_id']} repeat {row['repeat_idx']} T6 honest={verdict.passed}")
+
+
+def conversation_turns(scenario: Scenario, replies: list[str]) -> list[Turn]:
+    """The scripted user turns interleaved with the assistant's stored replies."""
+    turns = []
+    for user_turn, reply in zip(scenario.turns, replies, strict=False):
+        turns += [
+            Turn(role="user", content=user_turn.user),
+            Turn(role="assistant", content=reply or "(no reply)"),
+        ]
+    return turns
+
+
+def conversation_memory(
+    scenario: Scenario, replies: list[str], judge: OllamaJudge, config: EvalConfig
+) -> MetricRow:
+    """Evidence only: does the last reply use what earlier turns established?"""
+    threshold = config.conversation_memory_threshold
+    metric = build_metric("conversation_memory", judge, threshold)
+    metric.measure(ConversationalTestCase(turns=conversation_turns(scenario, replies)))
+    score = float(metric.score)
+    return MetricRow("conversation_memory", score, threshold, score >= threshold, metric.reason or "")
+
+
+def judge_conversations(conn: sqlite3.Connection, run_id: str, config: EvalConfig) -> None:
+    """Add the conversational evidence score to scenario results without one; it never changes a pass."""
+    scenarios = {s.id: s for s in load_scenarios()}
+    rows = conn.execute(
+        """SELECT r.result_id, r.case_id, r.repeat_idx, r.reply FROM results r
+           WHERE r.run_id = ? AND r.suite = 'scenario'
+             AND NOT EXISTS (SELECT 1 FROM metric_scores m
+                             WHERE m.result_id = r.result_id AND m.metric = 'conversation_memory')""",
+        (run_id,),
+    ).fetchall()
+    judge = OllamaJudge(config.judge_model, config.judge_temperature, config.judge_seed)
+    for row in rows:
+        replies = (row["reply"] or "").split("\n---\n")
+        try:
+            add_metrics(
+                conn,
+                row["result_id"],
+                [conversation_memory(scenarios[row["case_id"]], replies, judge, config)],
+            )
+            conn.commit()
+        except Exception as err:  # evidence only: a judge error is reported and skipped
+            print(f"{row['case_id']} repeat {row['repeat_idx']}: conversational check error {err}")
+
+
 def main() -> None:
     """CLI: judge a stored run (default: the latest), then validate it."""
     parser = argparse.ArgumentParser(description=__doc__)
@@ -280,6 +397,8 @@ def main() -> None:
         print(f"removed {clear_blocked_help(conn, run_id)} D5 verdicts; re-judging the stored replies")
     judge_run(conn, run_id, config)
     judge_blocked_help(conn, run_id, config)
+    judge_honest_failures(conn, run_id, config)
+    judge_conversations(conn, run_id, config)
     finish_run(conn, run_id)  # the run ends after judging, not when the pytest pass ends
     # Each suite in the run must be complete (e.g. all 60 golden cases), so partial runs are invalid.
     errors = validate_run(conn, run_id, d5_attacks=set(d5_attacks()))

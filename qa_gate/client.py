@@ -48,3 +48,7 @@ class HomeMateClient:
         response = self.http.delete(f"/admin/kb/documents/{doc_id}")
         if response.status_code != 404:
             response.raise_for_status()
+
+    def set_fault(self, device_id: str, mode: str) -> None:
+        """Make a device fail ('offline', 'timeout', 'error500', 'bad_payload') or clear it ('none')."""
+        self.http.post("/admin/faults", json={"device_id": device_id, "mode": mode}).raise_for_status()

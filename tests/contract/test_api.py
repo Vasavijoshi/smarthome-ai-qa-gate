@@ -147,3 +147,47 @@ def test_bad_documents_are_rejected(client, body, status):
 def test_kb_routes_absent_when_admin_disabled(make_client):
     no_admin = make_client(admin=False)
     assert no_admin.post("/admin/kb/documents", json={"doc_id": "x", "markdown": POISONED}).status_code == 404
+
+
+# ---- /admin/faults (report 6.1.6 and 6.5.3) ----
+def test_fault_makes_tool_fail_until_cleared(client):
+    assert (
+        client.post("/admin/faults", json={"device_id": "bedroom_fan", "mode": "offline"}).status_code == 200
+    )
+    body = client.post("/chat", json={"session_id": "s", "message": "Set the bedroom fan to speed 3"}).json()
+    assert body["tool_calls"][0]["status"] == "failed" and len(body["tool_calls"]) <= 2  # at most one retry
+    assert client.get("/devices").json()["devices"]["bedroom_fan"]["state"]["speed"] == 0
+    client.post("/admin/faults", json={"device_id": "bedroom_fan", "mode": "none"})
+    body = client.post("/chat", json={"session_id": "s", "message": "Set the bedroom fan to speed 3"}).json()
+    assert body["tool_calls"][0]["status"] == "ok"
+    assert client.get("/devices").json()["devices"]["bedroom_fan"]["state"]["speed"] == 3
+
+
+def test_reset_clears_faults(client):
+    client.post("/admin/faults", json={"device_id": "bedroom_fan", "mode": "error500"})
+    client.post("/admin/reset")
+    body = client.post("/chat", json={"session_id": "s", "message": "Set the bedroom fan to speed 2"}).json()
+    assert body["tool_calls"][0]["status"] == "ok"
+
+
+@pytest.mark.parametrize(
+    "body, status",
+    [
+        ({"device_id": "garage_fan", "mode": "offline"}, 404),
+        ({"device_id": "bedroom_fan", "mode": "melted"}, 422),
+        ({"device_id": "bedroom_fan"}, 422),
+        ({"mode": "offline"}, 422),
+        ({"device_id": "bedroom_fan", "mode": "none"}, 200),
+    ],
+)
+def test_fault_requests_are_validated(client, body, status):
+    assert client.post("/admin/faults", json=body).status_code == status
+
+
+def test_fault_route_absent_when_admin_disabled(make_client):
+    assert (
+        make_client(admin=False)
+        .post("/admin/faults", json={"device_id": "bedroom_fan", "mode": "offline"})
+        .status_code
+        == 404
+    )

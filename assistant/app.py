@@ -3,6 +3,7 @@
 import json
 import time
 from collections import defaultdict
+from typing import Literal
 
 import httpx
 from fastapi import FastAPI, HTTPException
@@ -85,6 +86,13 @@ class KBDocument(BaseModel):
     markdown: str = Field(min_length=1)
 
 
+class FaultRequest(BaseModel):
+    """Body of POST /admin/faults: make one device fail, or clear its fault with mode 'none'."""
+
+    device_id: str
+    mode: Literal["offline", "timeout", "error500", "bad_payload", "none"]
+
+
 class ChatError(Exception):
     """A turn that failed, for example 'invalid_response' after the JSON retry."""
 
@@ -119,6 +127,7 @@ class HomeMate:
         self.prompt = self.config.prompt_text
         self.base_chunks = load_chunks(KB_DIR, self.config.max_chunk_words, self.config.overlap_words)
         self.extra_docs: dict[str, str] = {}  # test-only documents, kept in memory, never on disk
+        self.faults: dict[str, str] = {}  # test-only device faults: device_id -> mode
         self.retriever = Retriever(self.base_chunks, settings.retriever)
         self.llm = llm or make_llm(settings)
         self.kb_version = kb_version()
@@ -127,8 +136,9 @@ class HomeMate:
         reset_devices(settings.db_path)
 
     def reset(self) -> None:
-        """Clear sessions and added documents, and put every device back to its initial state."""
+        """Clear sessions, faults and added documents, and put every device back to its initial state."""
         self.sessions.clear()
+        self.faults.clear()
         reset_devices(self.settings.db_path)
         if self.extra_docs:
             self.extra_docs.clear()
@@ -191,6 +201,7 @@ class HomeMate:
                 decision.arguments,
                 validate=self.config.validate_args,
                 require_confirmation=self.config.require_unlock_confirmation,
+                faults=self.faults,
             )
             calls.append(ToolCallRecord(tool=decision.tool, arguments=decision.arguments, **vars(outcome)))
             messages.append({"role": "assistant", "content": decision.model_dump_json(exclude_none=True)})
@@ -297,6 +308,17 @@ def create_app(settings: Settings | None = None, llm: LLMClient | None = None) -
             except ValueError as err:
                 raise HTTPException(status_code=422, detail=str(err)) from err
             return {"doc_id": document.doc_id, "chunks": chunks}
+
+        @app.post("/admin/faults")
+        def admin_set_fault(request: FaultRequest) -> dict:
+            """Make a device fail until cleared or reset (test-only); mode 'none' clears it."""
+            if request.device_id not in read_devices(settings.db_path):
+                raise HTTPException(status_code=404, detail="device not found")
+            if request.mode == "none":
+                homemate.faults.pop(request.device_id, None)
+            else:
+                homemate.faults[request.device_id] = request.mode
+            return {"faults": homemate.faults}
 
         @app.delete("/admin/kb/documents/{doc_id}")
         def admin_delete_document(doc_id: str) -> dict:

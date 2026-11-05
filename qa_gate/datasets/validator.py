@@ -1,4 +1,7 @@
-"""Golden-set validator (report section 6.2.4). Run: python -m qa_gate.datasets.validator"""
+"""Dataset validator (report 6.2.4): golden set, attacks, controls, tool cases and scenarios.
+
+Run: python -m qa_gate.datasets.validator
+"""
 
 import hashlib
 import json
@@ -16,12 +19,18 @@ from qa_gate.datasets.loader import (
     ATTACKS_PATH,
     CONTROLS_PATH,
     REPO_ROOT,
+    SCENARIOS_PATH,
+    TOOL_CASES_PATH,
     Attack,
     Control,
+    Fault,
     GoldenCase,
+    Scenario,
+    ToolCase,
     load_raw,
 )
 from qa_gate.metrics.deterministic import normalise, phrase_in_normalised
+from qa_gate.metrics.tools import ARG_MODELS, DEVICE_FIELDS, legal_value, parsed_args
 
 # The framework reads the manuals as files; it never imports assistant code.
 KB_DIR = REPO_ROOT / "assistant" / "knowledge_base"
@@ -288,16 +297,120 @@ def run_dataset_hash(datasets: dict[str, list[dict]]) -> str:
     return dataset_hash([{name: datasets[name]} for name in sorted(datasets)])
 
 
+TOOL_GROUP_COUNTS = {
+    "correct_call": 5,
+    "ambiguity": 2,
+    "invalid_argument": 3,
+    "unsupported": 2,
+    "no_tool_needed": 2,
+    "missing_capability": 1,
+    "failure_injection": 8,
+}
+GROUP_CALL = {  # what each group expects (report 6.5.1)
+    "correct_call": "yes",
+    "ambiguity": "no",
+    "invalid_argument": "either",
+    "unsupported": "either",
+    "no_tool_needed": "no",
+    "missing_capability": "no",
+    "failure_injection": "yes",
+}
+SCENARIO_TURNS = {  # report 6.5.5, in order
+    "S-01": 3, "S-02": 3, "S-03": 3, "S-04": 4, "S-05": 3,
+    "S-06": 5, "S-07": 3, "S-08": 4, "S-09": 7, "S-10": 4,
+}  # fmt: skip
+
+
+def check_state_spec(expect_state: dict[str, dict]) -> list[str]:
+    """An expected state names known devices and fields, with legal values."""
+    errors = []
+    for device_id, fields in expect_state.items():
+        rules = DEVICE_FIELDS.get(device_id)
+        if rules is None:
+            errors.append(f"unknown device {device_id}")
+            continue
+        for name, value in fields.items():
+            if name not in rules:
+                errors.append(f"unknown field {device_id}.{name}")
+            elif not legal_value(value, *rules[name]):
+                errors.append(f"expected value {device_id}.{name} = {value!r} is not legal")
+    return errors
+
+
+def check_fault(fault: Fault | None) -> list[str]:
+    """A fault names a known device."""
+    return [f"fault on unknown device {fault.device}"] if fault and fault.device not in DEVICE_FIELDS else []
+
+
+def check_tool_case(case: ToolCase) -> list[str]:
+    """Group rules, tool and arguments, state, fault and failure-reporting rules for one tool case."""
+    errors = check_state_spec(case.expect_state) + check_fault(case.fault)
+    if case.expect_tool_call != GROUP_CALL[case.group]:
+        errors.append(f"{case.group} cases must use expect_tool_call {GROUP_CALL[case.group]}")
+    if not case.turns or not all(t.strip() for t in case.turns):
+        errors.append("needs at least one non-empty turn")
+    if case.expect_tool_call == "yes":
+        if case.expect_tool not in ARG_MODELS:
+            errors.append(f"expect_tool must be one of {sorted(ARG_MODELS)}")
+        elif case.expect_args is None or parsed_args(case.expect_tool, case.expect_args) is None:
+            errors.append("expect_args must be valid arguments for expect_tool")
+    elif case.expect_tool is not None or case.expect_args is not None:
+        errors.append("expect_tool and expect_args are only for expect_tool_call 'yes'")
+    failure = case.group == "failure_injection"
+    if failure != (case.fault is not None):
+        errors.append("a fault is required for failure injection and only there")
+    if failure and not (case.reply_must_not_claim_success and case.max_tool_calls == 2):
+        errors.append("failure cases need reply_must_not_claim_success and max_tool_calls 2")
+    if failure and case.fault and (case.expect_args or {}).get("device_id") != case.fault.device:
+        errors.append("the expected call must target the faulty device")
+    return [f"{case.id}: {e}" for e in errors]
+
+
+def validate_tool_cases(raw_cases: list[dict]) -> list[str]:
+    """23 tool cases in the 6.5.1 mix, each passing its own rules."""
+    cases, errors = parse_items(raw_cases, ToolCase)
+    if errors:
+        return errors
+    errors = [f"duplicate id {i}" for i, n in Counter(c.id for c in cases).items() if n > 1]
+    actual = dict(Counter(c.group for c in cases))
+    if actual != TOOL_GROUP_COUNTS:
+        errors.append(f"tool group counts {actual} differ from {TOOL_GROUP_COUNTS}")
+    for case in cases:
+        errors += check_tool_case(case)
+    return errors
+
+
+def validate_scenarios(raw_scenarios: list[dict]) -> list[str]:
+    """The 10 scenarios of 6.5.5 with their turn counts, known tools, devices and legal expected states."""
+    scenarios, errors = parse_items(raw_scenarios, Scenario)
+    if errors:
+        return errors
+    counts = {s.id: len(s.turns) for s in scenarios}
+    if counts != SCENARIO_TURNS:
+        errors.append(f"scenario turn counts {counts} differ from {SCENARIO_TURNS}")
+    for scenario in scenarios:
+        for i, turn in enumerate(scenario.turns, start=1):
+            problems = check_state_spec(turn.expect_state) + check_fault(turn.fault_before)
+            if turn.expect_tool not in (None, "none") and turn.expect_tool not in ARG_MODELS:
+                problems.append(f"unknown tool {turn.expect_tool}")
+            if not turn.user.strip():
+                problems.append("empty user turn")
+            errors += [f"{scenario.id} turn {i}: {p}" for p in problems]
+    return errors
+
+
 def main() -> int:
-    """Validate data/golden_set.yaml, print the result and return an exit code."""
+    """Validate every dataset in data/, print the result and return an exit code."""
     raw = load_raw()
     attacks, controls = load_raw(ATTACKS_PATH), load_raw(CONTROLS_PATH)
+    tool_cases, scenarios = load_raw(TOOL_CASES_PATH), load_raw(SCENARIOS_PATH)
     errors = validate(raw)
     review = warnings(raw)
     safety_errors = validate_attacks(attacks, set(load_eval_config().blocked_topics)) + validate_controls(
         controls
     )
-    for error in errors + safety_errors:
+    tool_errors = validate_tool_cases(tool_cases) + validate_scenarios(scenarios)
+    for error in errors + safety_errors + tool_errors:
         print(f"ERROR {error}")
     for warning in review:
         print(f"WARNING {warning}")
@@ -306,9 +419,18 @@ def main() -> int:
         f"dataset hash {dataset_hash(raw)[:12]}"
     )
     print(f"{len(attacks)} attacks and {len(controls)} controls, {len(safety_errors)} errors")
-    combined = run_dataset_hash({"golden": raw, "attacks": attacks, "controls": controls})
+    print(f"{len(tool_cases)} tool cases and {len(scenarios)} scenarios, {len(tool_errors)} errors")
+    combined = run_dataset_hash(
+        {
+            "golden": raw,
+            "attacks": attacks,
+            "controls": controls,
+            "tool_cases": tool_cases,
+            "scenarios": scenarios,
+        }
+    )
     print(f"run dataset hash {combined[:12]}")
-    return 1 if errors or safety_errors else 0
+    return 1 if errors or safety_errors or tool_errors else 0
 
 
 if __name__ == "__main__":

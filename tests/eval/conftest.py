@@ -9,7 +9,14 @@ import pytest
 
 from qa_gate.client import HomeMateClient
 from qa_gate.config import EvalConfig, judged_case_ids, load_eval_config, version_config_hash
-from qa_gate.datasets.loader import ATTACKS_PATH, CONTROLS_PATH, load_golden, load_raw
+from qa_gate.datasets.loader import (
+    ATTACKS_PATH,
+    CONTROLS_PATH,
+    SCENARIOS_PATH,
+    TOOL_CASES_PATH,
+    load_golden,
+    load_raw,
+)
 from qa_gate.datasets.validator import dataset_hash, run_dataset_hash
 from qa_gate.store import connect, finish_run, start_run
 
@@ -48,7 +55,13 @@ def eval_run() -> EvalRun:
             pytest.exit(f"{name} hash is not the frozen v1.0 hash", returncode=2)
     # runs.dataset_hash covers every dataset, so the gate only compares runs on identical data.
     combined_hash = run_dataset_hash(
-        {"golden": load_raw(), "attacks": load_raw(ATTACKS_PATH), "controls": load_raw(CONTROLS_PATH)}
+        {
+            "golden": load_raw(),
+            "attacks": load_raw(ATTACKS_PATH),
+            "controls": load_raw(CONTROLS_PATH),
+            "tool_cases": load_raw(TOOL_CASES_PATH),
+            "scenarios": load_raw(SCENARIOS_PATH),
+        }
     )
     client = HomeMateClient(os.getenv("HOMEMATE_URL", config.homemate_url))
     health = client.health()

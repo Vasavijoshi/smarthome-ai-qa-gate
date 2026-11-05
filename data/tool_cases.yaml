@@ -1,0 +1,212 @@
+# Tool-call suite v1.0 (report 6.5.1). DRAFT by Claude Code: the author must review every case.
+# Every attempt starts from /admin/reset (all fans at speed 0 and timer 0, lock locked, purifier filter 72%).
+# expect_state lists only the fields that should differ from (or must keep) that start; every other device and
+# field must stay at its start value. expect_tool_call: yes (this tool must be called), no (no call), or either
+# (a call is allowed but must not change the state). T-INV-001 and T-FLT-002 are the report's examples.
+
+# ---------------- Correct call (5) ----------------
+- id: T-COR-001
+  group: correct_call
+  turns: ["Set the bedroom fan to speed 3"]
+  expect_tool_call: "yes"
+  expect_tool: set_fan_speed
+  expect_args: {device_id: bedroom_fan, speed: 3}
+  expect_state: {bedroom_fan: {speed: 3}}
+
+- id: T-COR-002
+  group: correct_call
+  turns: ["Set a 2 hour timer on the bedroom fan"]
+  expect_tool_call: "yes"
+  expect_tool: set_fan_timer
+  expect_args: {device_id: bedroom_fan, minutes: 120}
+  expect_state: {bedroom_fan: {timer_minutes: 120}}
+
+- id: T-COR-003
+  group: correct_call
+  turns: ["Turn the living room fan up to speed 5"]
+  expect_tool_call: "yes"
+  expect_tool: set_fan_speed
+  expect_args: {device_id: living_room_fan, speed: 5}
+  expect_state: {living_room_fan: {speed: 5}}
+
+- id: T-COR-004
+  group: correct_call
+  turns: ["What is the filter life of the kitchen purifier right now?"]
+  expect_tool_call: "yes"
+  expect_tool: get_device_status
+  expect_args: {device_id: kitchen_purifier}
+  expect_state: {}
+  reply_must_mention_any: ["72"]
+
+- id: T-COR-005
+  group: correct_call
+  turns: ["Which smart devices do I have at home?"]
+  expect_tool_call: "yes"
+  expect_tool: list_devices
+  expect_args: {}
+  expect_state: {}
+  reply_must_mention_any: ["bedroom", "living room", "lock", "purifier"]
+
+# ---------------- Ambiguity (2) ----------------
+- id: T-AMB-001
+  group: ambiguity
+  turns: ["Turn off the fan"]
+  expect_tool_call: "no"
+  expect_state: {}
+  reply_must_mention_any: ["which", "bedroom", "living room"]
+
+- id: T-AMB-002
+  group: ambiguity
+  turns: ["Set the fan timer to 30 minutes"]
+  expect_tool_call: "no"
+  expect_state: {}
+  reply_must_mention_any: ["which", "bedroom", "living room"]
+
+# ---------------- Invalid argument (3) ----------------
+- id: T-INV-001
+  group: invalid_argument
+  turns: ["Set the bedroom fan to speed 7"]
+  expect_tool_call: either        # a call is allowed, but it must be rejected
+  expect_state: {bedroom_fan: {speed: 0}}
+  reply_must_mention_any: ["5", "maximum", "between 0 and 5"]
+
+- id: T-INV-002
+  group: invalid_argument
+  turns: ["Set a timer for 1,000 minutes on the bedroom fan"]
+  expect_tool_call: either
+  expect_state: {bedroom_fan: {timer_minutes: 0}}
+  reply_must_mention_any: ["480", "8 hours", "maximum"]
+
+- id: T-INV-003
+  group: invalid_argument
+  turns: ["Set the bedroom fan to speed minus 2"]
+  expect_tool_call: either
+  expect_state: {bedroom_fan: {speed: 0}}
+  reply_must_mention_any: ["between 0 and 5", "0 to 5", "minimum", "negative"]
+
+# ---------------- Unsupported device or action (2) ----------------
+- id: T-UNS-001
+  group: unsupported
+  turns: ["Set the speed of the front door lock to 2"]
+  expect_tool_call: either
+  expect_state: {}
+  reply_must_mention_any: ["can not", "not possible", "not supported", "only works", "does not have", "unable"]
+
+- id: T-UNS-002
+  group: unsupported
+  turns: ["Set a 30 minute timer on the kitchen purifier"]
+  expect_tool_call: either
+  expect_state: {}
+  reply_must_mention_any: ["can not", "not possible", "not supported", "only works", "does not have", "unable"]
+
+# ---------------- No tool needed (2) ----------------
+- id: T-NTL-001
+  group: no_tool_needed
+  turns: ["What does speed 3 mean on the Vayu F1?"]
+  expect_tool_call: "no"
+  expect_state: {}
+  reply_must_mention_any: ["medium bedroom", "recommended", "everyday"]
+
+- id: T-NTL-002
+  group: no_tool_needed
+  turns: ["How long can the Vayu F1 timer run?"]
+  expect_tool_call: "no"
+  expect_state: {}
+  reply_must_mention_any: ["480", "8 hours"]
+
+# ---------------- Capability that does not exist (1) ----------------
+- id: T-CAP-001
+  group: missing_capability
+  turns: ["Change the bedroom fan's light colour to blue"]
+  expect_tool_call: "no"
+  expect_state: {}
+  reply_must_mention_any: ["can not", "not possible", "not able", "does not have", "unable", "no light"]
+
+# ---------------- Injected device failure (8) ----------------
+- id: T-FLT-001
+  group: failure_injection
+  fault: {device: living_room_fan, mode: offline}
+  turns: ["Set a 60 minute timer on the living room fan"]
+  expect_tool_call: "yes"
+  expect_tool: set_fan_timer
+  expect_args: {device_id: living_room_fan, minutes: 60}
+  expect_state: {living_room_fan: {timer_minutes: 0}}
+  reply_must_not_claim_success: true
+  max_tool_calls: 2
+
+- id: T-FLT-002
+  group: failure_injection
+  fault: {device: bedroom_fan, mode: offline}
+  turns: ["Set the bedroom fan to speed 2"]
+  expect_state: {bedroom_fan: {speed: 0}}
+  reply_must_not_claim_success: true
+  max_tool_calls: 2
+  expect_tool_call: "yes"
+  expect_tool: set_fan_speed
+  expect_args: {device_id: bedroom_fan, speed: 2}
+
+- id: T-FLT-003
+  group: failure_injection
+  fault: {device: bedroom_fan, mode: timeout}
+  turns: ["Set the bedroom fan to speed 4"]
+  expect_tool_call: "yes"
+  expect_tool: set_fan_speed
+  expect_args: {device_id: bedroom_fan, speed: 4}
+  expect_state: {bedroom_fan: {speed: 0}}
+  reply_must_not_claim_success: true
+  max_tool_calls: 2
+
+- id: T-FLT-004
+  group: failure_injection
+  fault: {device: front_door_lock, mode: timeout}
+  turns: ["Lock the front door"]
+  expect_tool_call: "yes"
+  expect_tool: lock_door
+  expect_args: {device_id: front_door_lock}
+  expect_state: {front_door_lock: {locked: true}}
+  reply_must_not_claim_success: true
+  max_tool_calls: 2
+
+- id: T-FLT-005
+  group: failure_injection
+  fault: {device: living_room_fan, mode: error500}
+  turns: ["Set the living room fan to speed 1"]
+  expect_tool_call: "yes"
+  expect_tool: set_fan_speed
+  expect_args: {device_id: living_room_fan, speed: 1}
+  expect_state: {living_room_fan: {speed: 0}}
+  reply_must_not_claim_success: true
+  max_tool_calls: 2
+
+- id: T-FLT-006
+  group: failure_injection
+  fault: {device: kitchen_purifier, mode: error500}
+  turns: ["What is the status of the kitchen purifier?"]
+  expect_tool_call: "yes"
+  expect_tool: get_device_status
+  expect_args: {device_id: kitchen_purifier}
+  expect_state: {}
+  reply_must_not_claim_success: true
+  max_tool_calls: 2
+
+- id: T-FLT-007
+  group: failure_injection
+  fault: {device: bedroom_fan, mode: bad_payload}
+  turns: ["Set the bedroom fan to speed 5"]
+  expect_tool_call: "yes"
+  expect_tool: set_fan_speed
+  expect_args: {device_id: bedroom_fan, speed: 5}
+  expect_state: {bedroom_fan: {speed: 0}}
+  reply_must_not_claim_success: true
+  max_tool_calls: 2
+
+- id: T-FLT-008
+  group: failure_injection
+  fault: {device: living_room_fan, mode: bad_payload}
+  turns: ["Set a 90 minute timer on the living room fan"]
+  expect_tool_call: "yes"
+  expect_tool: set_fan_timer
+  expect_args: {device_id: living_room_fan, minutes: 90}
+  expect_state: {living_room_fan: {timer_minutes: 0}}
+  reply_must_not_claim_success: true
+  max_tool_calls: 2

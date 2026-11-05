@@ -208,13 +208,13 @@ def test_category_summary_has_both_dimensions(conn):
 def test_complete_run_is_valid(conn):
     for i in range(4):
         add_case(conn, f"C{i}")
-    assert validate_run(conn, run_of(conn), expected={"golden": 4}) == []
+    assert validate_run(conn, run_of(conn), expected={"golden": 12}) == []
     assert conn.execute("SELECT status FROM runs").fetchone()[0] == "valid"
 
 
 def test_unjudged_cases_need_no_judge_scores(conn):
     add_case(conn, "C1", judged=False)
-    assert validate_run(conn, run_of(conn), expected={"golden": 1}) == []
+    assert validate_run(conn, run_of(conn), expected={"golden": 3}) == []
 
 
 @pytest.mark.parametrize(
@@ -246,7 +246,7 @@ def test_broken_runs_are_invalid(conn, break_it, message):
         add_case(conn, f"C{i}")
     conn.execute("PRAGMA foreign_keys = OFF")
     break_it(conn)
-    errors = validate_run(conn, run_of(conn), expected={"golden": 2})
+    errors = validate_run(conn, run_of(conn), expected={"golden": 6})
     assert any(message in e for e in errors), errors
     assert conn.execute("SELECT status FROM runs").fetchone()[0] == "invalid"
 
@@ -334,8 +334,8 @@ def test_false_refusal_needs_a_majority_of_repeats(conn):
 def test_suite_counts_check_each_suite_present(conn):
     add_attack(conn, "A1", (0, 0, 0))
     add_control(conn, "C1", (0, 0, 0))
-    assert validate_run(conn, run_of(conn), expected={"attack": 1, "control": 1}) == []
-    errors = validate_run(conn, run_of(conn), expected={"attack": 2, "control": 1})
+    assert validate_run(conn, run_of(conn), expected={"attack": 3, "control": 3}) == []
+    errors = validate_run(conn, run_of(conn), expected={"attack": 6, "control": 3})
     assert errors == ["3 attack results, expected 6"]
 
 
@@ -362,6 +362,83 @@ def test_safety_summary_shows_run_status_on_every_row(conn):
     add_attack(conn, "A2", (0, 0, 0), category="direct_injection", severity="high", detector="D2")
     statuses = {r["run_status"] for r in conn.execute("SELECT run_status FROM v_safety_summary")}
     assert statuses == {"running"}
-    validate_run(conn, run_of(conn), expected={"attack": 5})  # only 2 of 5 attacks stored: invalid
+    validate_run(conn, run_of(conn), expected={"attack": 15})  # only 2 of 5 attacks stored: invalid
     rows = conn.execute("SELECT category, run_status FROM v_safety_summary").fetchall()
     assert len(rows) == 3 and all(r["run_status"] == "invalid" for r in rows)
+
+
+# ---- tools and conversations (6.5.4) ----
+from qa_gate.store import check_honesty_judged  # noqa: E402
+
+
+def add_tool(conn, case_id: str, repeat: int, metrics: dict[str, bool], suite: str = "tool") -> int:
+    """Insert one tool or scenario result with the given pass/fail metric rows."""
+    row = {
+        "run_id": run_of(conn), "suite": suite, "case_id": case_id, "repeat_idx": repeat,
+        "passed": all(metrics.values()), "latency_ms": 10, "prompt_tokens": 1, "completion_tokens": 1,
+        "reply": "r", "error_type": None, "retrieved_json": "[]", "eval_ms": 5,
+    }  # fmt: skip
+    return add_result(conn, row, [MetricRow(m, float(p), None, p) for m, p in metrics.items()], [])
+
+
+def tools(conn) -> dict:
+    """The run's row of v_tool_summary."""
+    return dict(conn.execute("SELECT * FROM v_tool_summary").fetchone())
+
+
+def test_tool_metrics_use_the_majority_of_repeats(conn):
+    for i, ok in enumerate((1, 1, 0)):
+        add_tool(conn, "T-A", i, {"tool_selection": bool(ok), "T3_state": True, "T2_arguments": True})
+    for i, ok in enumerate((1, 0, 0)):
+        add_tool(conn, "T-B", i, {"tool_selection": bool(ok), "T3_state": bool(ok)})
+    t = tools(conn)
+    assert (t["tool_selection_passed"], t["tool_selection_cases"]) == (1, 2)
+    assert (t["state_passed"], t["state_cases"], t["argument_cases"]) == (1, 2, 1)
+
+
+def test_success_claim_if_phrase_or_judge_says_so(conn):
+    base = {"T4_call_count": True, "T6_names_failure": True}
+    add_tool(conn, "T-F", 0, {**base, "T6_no_success_phrase": False, "T6_honest_judge": True})
+    add_tool(conn, "T-F", 1, {**base, "T6_no_success_phrase": True, "T6_honest_judge": False})
+    add_tool(conn, "T-F", 2, {**base, "T6_no_success_phrase": True, "T6_honest_judge": True})
+    add_tool(conn, "T-G", 0, {"T4_call_count": True, "T6_names_failure": False,
+                              "T6_no_success_phrase": True, "T6_honest_judge": True})  # fmt: skip
+    t = tools(conn)
+    assert (t["success_claims"], t["failure_attempts"]) == (2, 4)
+    assert t["recovered"] == 1  # only T-F repeat 2 passes every T6 part and names the failure
+
+
+def test_invalid_state_incidents_count_tool_and_scenario_results(conn):
+    add_tool(conn, "T-A", 0, {"T5_invariants": False, "tool_selection": True})
+    add_tool(conn, "T-A", 1, {"T5_invariants": True, "tool_selection": True})
+    add_tool(conn, "S-01", 0, {"T5_invariants": False, "turn_1": True}, suite="scenario")
+    assert tools(conn)["invalid_state_incidents"] == 2
+
+
+def test_scenario_rates_and_consistent_passes(conn):
+    add_tool(conn, "S-01", 0, {"turn_1": True, "turn_2": True}, suite="scenario")
+    add_tool(conn, "S-01", 1, {"turn_1": True, "turn_2": True}, suite="scenario")
+    add_tool(conn, "S-02", 0, {"turn_1": True, "turn_2": False}, suite="scenario")
+    add_tool(conn, "S-02", 1, {"turn_1": True, "turn_2": True}, suite="scenario")
+    t = tools(conn)
+    assert (t["scenario_passed"], t["scenario_results"]) == (3, 4)
+    assert (t["turns_passed"], t["turns"]) == (7, 8)
+    assert t["consistent_passes"] == 1 and t["run_status"] == "running"
+
+
+def test_missing_t6_judge_verdict_is_reported(conn):
+    add_tool(conn, "T-F", 0, {"T6_no_success_phrase": True, "T6_honest_judge": True})
+    add_tool(conn, "T-F", 1, {"T6_no_success_phrase": True})
+    add_tool(conn, "T-A", 0, {"tool_selection": True})
+    assert check_honesty_judged(conn, run_of(conn)) == ["T-F repeat 1: no T6 judge verdict"]
+
+
+def test_suite_counts_use_result_counts_per_suite(conn):
+    for i in range(3):
+        add_tool(conn, "T-A", i, {"tool_selection": True})
+    for i in range(2):
+        add_tool(conn, "S-01", i, {"turn_1": True}, suite="scenario")
+    assert validate_run(conn, run_of(conn), expected={"tool": 3, "scenario": 2}) == []
+    assert validate_run(conn, run_of(conn), expected={"tool": 69, "scenario": 2}) == [
+        "3 tool results, expected 69"
+    ]

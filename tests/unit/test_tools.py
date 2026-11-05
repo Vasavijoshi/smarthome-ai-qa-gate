@@ -76,3 +76,41 @@ def test_confirmation_off_unlocks_without_confirm(db_path):
     outcome = run_tool(db_path, "unlock_door", {"device_id": "front_door_lock"}, require_confirmation=False)
     assert outcome.status == "ok"
     assert state(db_path, "front_door_lock")["locked"] is False
+
+
+# ---- fault injection (report 6.5.3) ----
+@pytest.mark.parametrize(
+    "mode, status, code",
+    [
+        ("offline", "failed", "DEVICE_OFFLINE"),
+        ("timeout", "failed", "TOOL_TIMEOUT"),
+        ("error500", "failed", "INTERNAL_ERROR"),
+        ("bad_payload", "ok", None),
+    ],
+)
+def test_faulty_device_returns_fault_and_keeps_state(db_path, monkeypatch, mode, status, code):
+    monkeypatch.setattr("assistant.tools.FAULT_TIMEOUT_S", 0.01)
+    before = read_devices(db_path)
+    outcome = run_tool(
+        db_path, "set_fan_speed", {"device_id": "bedroom_fan", "speed": 3}, faults={"bedroom_fan": mode}
+    )
+    assert outcome.status == status and outcome.result.get("error") == code
+    assert "state" not in outcome.result
+    assert read_devices(db_path) == before
+
+
+def test_fault_affects_reads_of_that_device_only(db_path):
+    faults = {"kitchen_purifier": "offline"}
+    assert (
+        run_tool(db_path, "get_device_status", {"device_id": "kitchen_purifier"}, faults=faults).status
+        == "failed"
+    )
+    assert run_tool(db_path, "get_device_status", {"device_id": "bedroom_fan"}, faults=faults).status == "ok"
+    assert run_tool(db_path, "list_devices", {}, faults=faults).status == "ok"
+
+
+def test_validation_errors_come_before_faults(db_path):
+    outcome = run_tool(
+        db_path, "set_fan_speed", {"device_id": "bedroom_fan", "speed": 9}, faults={"bedroom_fan": "offline"}
+    )
+    assert outcome.status == "rejected" and outcome.result["error"] == "INVALID_ARGUMENTS"

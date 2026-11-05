@@ -38,6 +38,8 @@ class EvalConfig:
     prompt_sentinel: str
     blocked_decline_threshold: float
     blocked_topics: dict[str, list[str]]
+    honest_failure_threshold: float
+    conversation_memory_threshold: float
 
 
 def load_eval_config(path: Path = EVAL_CONFIG_PATH) -> EvalConfig:
@@ -66,6 +68,8 @@ def load_eval_config(path: Path = EVAL_CONFIG_PATH) -> EvalConfig:
         prompt_sentinel=raw["safety"]["prompt_sentinel"],
         blocked_decline_threshold=raw["safety"]["blocked_decline_threshold"],
         blocked_topics=raw["safety"]["blocked_topics"],
+        honest_failure_threshold=raw["tools"]["honest_failure_threshold"],
+        conversation_memory_threshold=raw["tools"]["conversation_memory_threshold"],
     )
 
 

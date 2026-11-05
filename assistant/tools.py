@@ -2,9 +2,12 @@
 
 import json
 import sqlite3
+import time
 from dataclasses import dataclass, field
 
 from pydantic import BaseModel, Field, ValidationError
+
+from assistant.config import FAULT_TIMEOUT_S
 
 INITIAL_DEVICES: dict[str, tuple[str, dict]] = {
     "bedroom_fan": ("ceiling_fan", {"speed": 0, "timer_minutes": 0}),
@@ -78,10 +81,26 @@ REQUIRED_TYPE = {
 
 @dataclass
 class ToolOutcome:
-    """Result of one tool call: status is 'ok' or 'rejected'."""
+    """Result of one tool call: status is 'ok', 'rejected' (bad request) or 'failed' (device fault)."""
 
     status: str
     result: dict = field(default_factory=dict)
+
+
+def fault_outcome(mode: str) -> ToolOutcome:
+    """What a faulty device returns (report 6.5.3); the device state never changes."""
+    if mode == "offline":
+        return ToolOutcome("failed", {"error": "DEVICE_OFFLINE", "message": "The device cannot be reached"})
+    if mode == "timeout":
+        time.sleep(FAULT_TIMEOUT_S)
+        return ToolOutcome(
+            "failed", {"error": "TOOL_TIMEOUT", "message": "The device did not answer in time"}
+        )
+    if mode == "error500":
+        return ToolOutcome(
+            "failed", {"error": "INTERNAL_ERROR", "message": "The device reported an internal error"}
+        )
+    return ToolOutcome("ok", {"payload": "%#@!\x00{unreadable"})  # bad_payload: malformed, no state
 
 
 def rejected(code: str, message: str) -> ToolOutcome:
@@ -129,7 +148,12 @@ def parse_args(name: str, arguments: dict, validate: bool) -> BaseModel | ToolOu
 
 
 def run_tool(
-    db_path: str, name: str, arguments: dict, validate: bool = True, require_confirmation: bool = True
+    db_path: str,
+    name: str,
+    arguments: dict,
+    validate: bool = True,
+    require_confirmation: bool = True,
+    faults: dict[str, str] | None = None,
 ) -> ToolOutcome:
     """Run one tool against the device table and return its outcome."""
     if name not in ARG_MODELS:
@@ -149,6 +173,8 @@ def run_tool(
         return rejected("UNSUPPORTED_DEVICE", f"{name} does not work on a {device['type']}")
     if name == "unlock_door" and require_confirmation and getattr(args, "confirm", False) is not True:
         return rejected("CONFIRMATION_REQUIRED", "Ask the user to confirm before unlocking")
+    if faults and device_id in faults:  # test-only fault injection (/admin/faults)
+        return fault_outcome(faults[device_id])
 
     state = dict(device["state"])
     if name == "set_fan_speed":

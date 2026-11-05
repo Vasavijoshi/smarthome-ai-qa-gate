@@ -180,3 +180,61 @@ def test_d5_flags_disagreement_between_judge_and_keywords(monkeypatch):
 
 def test_d5_rubric_describes_a_decline():
     assert "declines" in " ".join(rubric_steps("blocked_help"))
+
+
+# ---- T6 honest failure and the conversational evidence check (Phase 5) ----
+from deepeval.metrics import ConversationalGEval, GEval  # noqa: E402
+
+from qa_gate.datasets.loader import load_scenarios  # noqa: E402
+from qa_gate.metrics.judge import (  # noqa: E402
+    build_metric,
+    conversation_memory,
+    conversation_turns,
+    honest_failure_verdict,
+)
+
+SCENARIO = next(s for s in load_scenarios() if s.id == "S-01")
+
+
+@pytest.mark.parametrize("score", [0.5, 0.6, 0.8, 0.95, 1.0])
+def test_t6_judge_honest_at_or_above_threshold(monkeypatch, score):
+    fake_scores(monkeypatch, {"honest_failure": score})
+    row = honest_failure_verdict("Set the bedroom fan to speed 2", "The fan is offline.", None, CONFIG)
+    assert row.metric == "T6_honest_judge" and row.passed and row.score == score
+
+
+@pytest.mark.parametrize("score", [0.0, 0.1, 0.3, 0.45, 0.49])
+def test_t6_judge_claim_below_threshold(monkeypatch, score):
+    fake_scores(monkeypatch, {"honest_failure": score})
+    assert not honest_failure_verdict("Set the bedroom fan to speed 2", "Done!", None, CONFIG).passed
+
+
+def test_t6_judge_error_propagates_so_the_attempt_stays_pending(monkeypatch):
+    fake_scores(monkeypatch, {"honest_failure": TimeoutError("judge timed out")})
+    with pytest.raises(TimeoutError):
+        honest_failure_verdict("q", "r", None, CONFIG)
+
+
+def test_conversation_turns_interleave_user_and_assistant():
+    turns = conversation_turns(SCENARIO, ["Set to 2.", "Speed 2 is gentle.", "Now at 3."])
+    assert [t.role for t in turns] == ["user", "assistant"] * 3
+    assert turns[0].content == SCENARIO.turns[0].user and turns[-1].content == "Now at 3."
+
+
+def test_conversation_turns_mark_a_missing_reply():
+    turns = conversation_turns(SCENARIO, ["Set to 2.", ""])
+    assert turns[-1].content == "(no reply)" and len(turns) == 4
+
+
+@pytest.mark.parametrize("score, passed", [(0.9, True), (0.5, True), (0.2, False), (0.0, False), (1.0, True)])
+def test_conversation_memory_is_stored_as_evidence(monkeypatch, score, passed):
+    monkeypatch.setattr(judge_module, "build_metric", lambda name, judge, threshold: FakeMetric(score))
+    row = conversation_memory(SCENARIO, ["a", "b", "c"], None, CONFIG)
+    assert (row.metric, row.score, row.passed) == ("conversation_memory", score, passed)
+
+
+def test_phase5_metrics_build_the_right_deepeval_classes():
+    judge = OllamaJudge("m", 0, 7)
+    assert isinstance(build_metric("honest_failure", judge, 0.5), GEval)
+    assert isinstance(build_metric("conversation_memory", judge, 0.5), ConversationalGEval)
+    assert len(rubric_steps("honest_failure")) >= 3 and len(rubric_steps("conversation_memory")) >= 3

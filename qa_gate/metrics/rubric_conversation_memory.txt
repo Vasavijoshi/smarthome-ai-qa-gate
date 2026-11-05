@@ -1,0 +1,4 @@
+This is a conversation between a user and a smart-home assistant. Supporting evidence only: it never decides a pass or fail.
+Check whether the assistant's last reply correctly uses information from earlier turns, such as the device, setting or product the user referred to before.
+Penalise a last reply that ignores, forgets or contradicts what was established earlier in the conversation.
+Do not penalise short replies that are consistent with the earlier turns.
