@@ -22,6 +22,8 @@ class EvalConfig:
     golden_dataset_hash: str
     attacks_dataset_hash: str
     controls_dataset_hash: str
+    tool_cases_dataset_hash: str
+    scenarios_dataset_hash: str
     homemate_url: str
     db_path: Path
     seeds: list[int]
@@ -52,6 +54,8 @@ def load_eval_config(path: Path = EVAL_CONFIG_PATH) -> EvalConfig:
         golden_dataset_hash=raw["golden_dataset_hash"],
         attacks_dataset_hash=raw["attacks_dataset_hash"],
         controls_dataset_hash=raw["controls_dataset_hash"],
+        tool_cases_dataset_hash=raw["tool_cases_dataset_hash"],
+        scenarios_dataset_hash=raw["scenarios_dataset_hash"],
         homemate_url=raw["homemate_url"],
         db_path=REPO_ROOT / raw["db_path"],
         seeds=raw["seeds"],

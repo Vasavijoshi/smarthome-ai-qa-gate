@@ -12,7 +12,14 @@ from qa_gate.config import (
     load_eval_config,
     version_config_hash,
 )
-from qa_gate.datasets.loader import ATTACKS_PATH, CONTROLS_PATH, load_golden, load_raw
+from qa_gate.datasets.loader import (
+    ATTACKS_PATH,
+    CONTROLS_PATH,
+    SCENARIOS_PATH,
+    TOOL_CASES_PATH,
+    load_golden,
+    load_raw,
+)
 from qa_gate.datasets.validator import dataset_hash
 
 pytestmark = pytest.mark.unit
@@ -27,10 +34,15 @@ def test_golden_set_matches_frozen_hash():
 
 @pytest.mark.parametrize(
     "path, field",
-    [(ATTACKS_PATH, "attacks_dataset_hash"), (CONTROLS_PATH, "controls_dataset_hash")],
+    [
+        (ATTACKS_PATH, "attacks_dataset_hash"),
+        (CONTROLS_PATH, "controls_dataset_hash"),
+        (TOOL_CASES_PATH, "tool_cases_dataset_hash"),
+        (SCENARIOS_PATH, "scenarios_dataset_hash"),
+    ],
 )
-def test_safety_datasets_match_frozen_hashes(path, field):
-    """Attacks and controls v1.0 are frozen: any edit must fail here until the author re-freezes."""
+def test_frozen_datasets_match_their_hashes(path, field):
+    """Attacks, controls, tool cases and scenarios v1.0 are frozen: any edit fails here until re-frozen."""
     assert dataset_hash(load_raw(path)) == getattr(load_eval_config(), field)
 
 

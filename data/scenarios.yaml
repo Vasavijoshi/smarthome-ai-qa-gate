@@ -1,4 +1,5 @@
-# Multi-turn scenarios v1.0 (report 6.5.5). DRAFT by Claude Code: the author must review every scenario.
+# Multi-turn scenarios v1.0 (report 6.5.5). Drafted by Claude Code, reviewed by the author, frozen after Phase 5
+# (hash in eval.yaml). Do not edit without telling the author; a change needs a new version and a new baseline.
 # User turns are scripted. Every repeat starts from /admin/reset. Per turn, optional assertions:
 #   expect_tool: a tool that must be called in this turn, or "none" (no call); omitted means any.
 #   expect_state: device fields after the turn (fields not listed must keep their value from before the turn).

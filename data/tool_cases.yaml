@@ -1,4 +1,5 @@
-# Tool-call suite v1.0 (report 6.5.1). DRAFT by Claude Code: the author must review every case.
+# Tool-call suite v1.0 (report 6.5.1). Drafted by Claude Code, reviewed by the author, frozen after Phase 5
+# (hash in eval.yaml). Do not edit without telling the author; a change needs a new version and a new baseline.
 # Every attempt starts from /admin/reset (all fans at speed 0 and timer 0, lock locked, purifier filter 72%).
 # expect_state lists only the fields that should differ from (or must keep) that start; every other device and
 # field must stay at its start value. expect_tool_call: yes (this tool must be called), no (no call), or either

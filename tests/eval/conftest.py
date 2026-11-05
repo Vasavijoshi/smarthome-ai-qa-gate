@@ -50,6 +50,8 @@ def eval_run() -> EvalRun:
     for name, path, frozen in [
         ("attacks", ATTACKS_PATH, config.attacks_dataset_hash),
         ("controls", CONTROLS_PATH, config.controls_dataset_hash),
+        ("tool_cases", TOOL_CASES_PATH, config.tool_cases_dataset_hash),
+        ("scenarios", SCENARIOS_PATH, config.scenarios_dataset_hash),
     ]:
         if dataset_hash(load_raw(path)) != frozen:
             pytest.exit(f"{name} hash is not the frozen v1.0 hash", returncode=2)
