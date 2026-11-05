@@ -33,3 +33,4 @@ Never tune prompts, rubrics, thresholds or the golden set after seeing results. 
 - `POST /chat` takes an optional integer `seed` (defaults to `LLM_SEED`), so the framework can run repeats with seeds 11, 22, 33. Approved by the author and noted in report section 6.1.7.
 - Deviations from the report go in the README deviations log.
 - Golden dataset v1.0 is frozen at hash `5d0396e9dc0590a4db3e3bd646fe01be54ef5bc2edeaf66959e11223ceb86a24` (commit 6e5bbca). Never edit `data/golden_set.yaml` without telling the author first.
+- Attacks v1.0 (`3f28599aceb7983f5df446038670b341fa5967441eaaacb2d12f23893e7da145`) and benign controls v1.0 (`11b960b4715c724856f5d6183e23423f26794c5e627fa60a04ba7cb4c0bc25da`) are frozen after Phase 4, hashes in `eval.yaml`. Never edit `data/attacks.yaml` or `data/controls.yaml` without telling the author first.

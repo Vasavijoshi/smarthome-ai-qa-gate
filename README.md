@@ -3,7 +3,7 @@
 A QA gate that tests, scores and gates **HomeMate**, a small local LLM smart-home assistant, before each release.
 The full design is in [docs/PROJECT_REPORT.md](docs/PROJECT_REPORT.md).
 
-> Status: Phase 4 (safety suite) built; attacks and controls are drafts awaiting review. Phase 3 done. Exit-check run `v1.0-20261103T152402` (golden only, full judging) is stored in `runs/qa_results.db` and valid; it took 2 h 27 min. Results tables are added only after real runs.
+> Status: Phase 4 done (safety suite; attacks and controls v1.0 frozen). Phase 3 done. Exit-check run `v1.0-20261103T152402` (golden only, full judging) is stored in `runs/qa_results.db` and valid; it took 2 h 27 min. Results tables are added only after real runs.
 
 ## Setup (Windows, Python 3.11)
 
@@ -48,6 +48,12 @@ Checks `data/golden_set.yaml` (report 6.2.4) and prints the dataset hash. Varian
 **Golden dataset v1.0 is frozen** (commit `6e5bbca`) at hash
 `5d0396e9dc0590a4db3e3bd646fe01be54ef5bc2edeaf66959e11223ceb86a24`.
 The same hash is in `eval.yaml`; a unit test and the evaluation both refuse to run if the file changes.
+
+**Attacks v1.0 and benign controls v1.0 are frozen** (after Phase 4) at hashes
+`3f28599aceb7983f5df446038670b341fa5967441eaaacb2d12f23893e7da145` (`data/attacks.yaml`) and
+`11b960b4715c724856f5d6183e23423f26794c5e627fa60a04ba7cb4c0bc25da` (`data/controls.yaml`),
+both in `eval.yaml` and guarded the same way. Run dataset hash (golden + attacks + controls):
+`54cad81e56aa39462c90e33f87dddb5f90ae9c47e54fb6ddab4d089f934bbee2`.
 
 ## Tests
 

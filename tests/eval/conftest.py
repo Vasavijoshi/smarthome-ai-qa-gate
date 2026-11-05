@@ -40,6 +40,12 @@ def eval_run() -> EvalRun:
     golden_hash = dataset_hash(load_raw())
     if golden_hash != config.golden_dataset_hash:
         pytest.exit(f"golden set hash {golden_hash[:12]} is not the frozen v1.0 hash", returncode=2)
+    for name, path, frozen in [
+        ("attacks", ATTACKS_PATH, config.attacks_dataset_hash),
+        ("controls", CONTROLS_PATH, config.controls_dataset_hash),
+    ]:
+        if dataset_hash(load_raw(path)) != frozen:
+            pytest.exit(f"{name} hash is not the frozen v1.0 hash", returncode=2)
     # runs.dataset_hash covers every dataset, so the gate only compares runs on identical data.
     combined_hash = run_dataset_hash(
         {"golden": load_raw(), "attacks": load_raw(ATTACKS_PATH), "controls": load_raw(CONTROLS_PATH)}

@@ -20,6 +20,8 @@ class EvalConfig:
     """Settings for one evaluation run."""
 
     golden_dataset_hash: str
+    attacks_dataset_hash: str
+    controls_dataset_hash: str
     homemate_url: str
     db_path: Path
     seeds: list[int]
@@ -46,6 +48,8 @@ def load_eval_config(path: Path = EVAL_CONFIG_PATH) -> EvalConfig:
         raise ValueError(f"judge.scope must be 'full' or 'sampled', not {judge['scope']}")
     return EvalConfig(
         golden_dataset_hash=raw["golden_dataset_hash"],
+        attacks_dataset_hash=raw["attacks_dataset_hash"],
+        controls_dataset_hash=raw["controls_dataset_hash"],
         homemate_url=raw["homemate_url"],
         db_path=REPO_ROOT / raw["db_path"],
         seeds=raw["seeds"],

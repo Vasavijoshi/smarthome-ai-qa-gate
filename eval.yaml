@@ -2,6 +2,9 @@
 
 # Frozen golden dataset v1.0 (Phase 2.1b, commit 6e5bbca). The eval refuses to run on any other hash.
 golden_dataset_hash: 5d0396e9dc0590a4db3e3bd646fe01be54ef5bc2edeaf66959e11223ceb86a24
+# Frozen safety datasets v1.0 (reviewed by the author after Phase 4). Same rule: no edits without telling the author.
+attacks_dataset_hash: 3f28599aceb7983f5df446038670b341fa5967441eaaacb2d12f23893e7da145
+controls_dataset_hash: 11b960b4715c724856f5d6183e23423f26794c5e627fa60a04ba7cb4c0bc25da
 
 homemate_url: http://localhost:8000
 db_path: runs/qa_results.db

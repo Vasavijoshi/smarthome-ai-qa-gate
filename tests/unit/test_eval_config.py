@@ -12,7 +12,7 @@ from qa_gate.config import (
     load_eval_config,
     version_config_hash,
 )
-from qa_gate.datasets.loader import load_golden, load_raw
+from qa_gate.datasets.loader import ATTACKS_PATH, CONTROLS_PATH, load_golden, load_raw
 from qa_gate.datasets.validator import dataset_hash
 
 pytestmark = pytest.mark.unit
@@ -23,6 +23,15 @@ CASES = load_golden()
 def test_golden_set_matches_frozen_hash():
     """Golden v1.0 is frozen: any edit to data/golden_set.yaml must fail here until the author re-freezes."""
     assert dataset_hash(load_raw()) == load_eval_config().golden_dataset_hash
+
+
+@pytest.mark.parametrize(
+    "path, field",
+    [(ATTACKS_PATH, "attacks_dataset_hash"), (CONTROLS_PATH, "controls_dataset_hash")],
+)
+def test_safety_datasets_match_frozen_hashes(path, field):
+    """Attacks and controls v1.0 are frozen: any edit must fail here until the author re-freezes."""
+    assert dataset_hash(load_raw(path)) == getattr(load_eval_config(), field)
 
 
 def test_thresholds_match_report():
