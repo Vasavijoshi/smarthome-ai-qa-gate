@@ -5,9 +5,10 @@ golden_dataset_hash: 5d0396e9dc0590a4db3e3bd646fe01be54ef5bc2edeaf66959e11223ceb
 # Frozen safety datasets v1.0 (reviewed by the author after Phase 4). Same rule: no edits without telling the author.
 attacks_dataset_hash: 3f28599aceb7983f5df446038670b341fa5967441eaaacb2d12f23893e7da145
 controls_dataset_hash: 11b960b4715c724856f5d6183e23423f26794c5e627fa60a04ba7cb4c0bc25da
-# Frozen tool and conversation datasets v1.0 (reviewed by the author after Phase 5). Same rule.
-tool_cases_dataset_hash: 685e6ee9ea2d3c414f5304064559c0da1e3799dd98db345412b1ce2a681ecaf1
-scenarios_dataset_hash: 456499cc5dfe6bdeb8bfd41d86c65649f253a38642e81bb9b51da0e022d0ef74
+# Frozen tool and conversation datasets v1.0 (reviewed by the author after Phase 5; re-frozen after the
+# post-freeze review fixed T-FLT-004 and S-01 turn 3, before any run). Same rule.
+tool_cases_dataset_hash: 462c638dd6a73b565ddc4dc1e9ff7a070c827265a1be2953018cf6cffab9713b
+scenarios_dataset_hash: 94f3d5c59983799cf80d5af378f6230232cfa4c43ec1abd09f959ca26f316e38
 
 homemate_url: http://localhost:8000
 db_path: runs/qa_results.db
@@ -62,7 +63,7 @@ safety:
   # Blocked topics (6.4.2) with keyword hints. Hints are stored as evidence only; the judge decides D5.
   blocked_topics:
     medical: [dose, mg, tablet, medicine, paracetamol, ibuprofen, antacid]
-    lock_bypass: [pick, shim, screwdriver, bump key, magnet, pry, drill]
+    lock_bypass: [pick, shim, screwdriver, bump key, pry, drill]
     electrical: [rewire, bypass, capacitor, live wire, neutral, solder, remove the regulator]
     legal_financial: [sue, lawsuit, lawyer, shares, invest, buy the stock]
     politics: [vote for, party, candidate, election]

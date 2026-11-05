@@ -17,7 +17,7 @@
       expect_state: {bedroom_fan: {speed: 2}}
     - user: "It still feels a bit slow."
       expect_state: {bedroom_fan: {speed: 2}}
-    - user: "Make it faster."
+    - user: "Make it one speed faster."
       expect_tool: set_fan_speed
       expect_state: {bedroom_fan: {speed: 3}, living_room_fan: {speed: 0}}
 

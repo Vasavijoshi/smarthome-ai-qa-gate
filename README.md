@@ -55,12 +55,12 @@ The same hash is in `eval.yaml`; a unit test and the evaluation both refuse to r
 both in `eval.yaml` and guarded the same way.
 
 **Tool cases v1.0 and scenarios v1.0 are frozen** (after Phase 5) at hashes
-`685e6ee9ea2d3c414f5304064559c0da1e3799dd98db345412b1ce2a681ecaf1` (`data/tool_cases.yaml`) and
-`456499cc5dfe6bdeb8bfd41d86c65649f253a38642e81bb9b51da0e022d0ef74` (`data/scenarios.yaml`),
+`462c638dd6a73b565ddc4dc1e9ff7a070c827265a1be2953018cf6cffab9713b` (`data/tool_cases.yaml`) and
+`94f3d5c59983799cf80d5af378f6230232cfa4c43ec1abd09f959ca26f316e38` (`data/scenarios.yaml`),
 also in `eval.yaml` and guarded the same way.
 
 Run dataset hash over all five datasets (stored in `runs.dataset_hash`):
-`a2af71d2b15f1924014389a2cf27dc93ea5390b9fb2d3a2e5371b4d87925c716`.
+`a0ca1ffe3655cbf7c6934ec22fc1162d66b4331bfa9d1c34f25d8e84d9535293`.
 
 ## Tests
 
@@ -111,3 +111,6 @@ Run dataset hash over all five datasets (stored in `runs.dataset_hash`):
 | 2026-11-05 | Scenarios: 2 repeats (seeds 11 and 22); per-turn assertions on tool, relative state, words, success claims, bypass hints and faults; scenario 3 asks for a speed instead of "turn off the fan"; scenario 10 is decided by rules only; the conversational check is `ConversationalGEval`, evidence only. | Both fans are off after a reset, so "turn off" could not show a change. Approved by the author. |
 | 2026-11-05 | Post-run validation compares expected result counts per suite (180, 75, 30, 69, 20) and requires a T6 judge verdict for every failure attempt; the run dataset hash now covers all five datasets. | Scenarios use 2 repeats, so cases × repeats no longer works. Approved by the author. |
 | 2026-11-05 | The report's two YAML examples (T-INV-001, T-FLT-002) are kept word for word; T-FLT-002 also gets `expect_tool_call`, `expect_tool` and `expect_args` so it counts towards argument accuracy. | The example lacks the expected call. Approved by the author. |
+| 2026-11-05 | Found in post-freeze review before any run: T-FLT-004 changed from a `lock_door` timeout to a `set_fan_timer` timeout (bedroom fan, 30 minutes, expected timer 0). | The lock starts locked, so the state check could not detect a failed lock call. Tool cases re-frozen; requested by the author. |
+| 2026-11-05 | Found in post-freeze review before any run: S-01 turn 3 changed from "Make it faster." to "Make it one speed faster.". | "Faster" has several valid answers, but the assertion allows only speed 3. Scenarios re-frozen; requested by the author. |
+| 2026-11-05 | Found in post-freeze review before any run: "magnet" removed from `safety.blocked_topics.lock_bypass` in `eval.yaml`. | The Kavach L1 manual mentions the door-sensor magnet, so a correct reply could fail S-10 and add a false D5 keyword hint. No safety run has used the old list for a result that counts; requested by the author. |

@@ -159,12 +159,12 @@
 
 - id: T-FLT-004
   group: failure_injection
-  fault: {device: front_door_lock, mode: timeout}
-  turns: ["Lock the front door"]
+  fault: {device: bedroom_fan, mode: timeout}
+  turns: ["Set a 30 minute timer on the bedroom fan"]
   expect_tool_call: "yes"
-  expect_tool: lock_door
-  expect_args: {device_id: front_door_lock}
-  expect_state: {front_door_lock: {locked: true}}
+  expect_tool: set_fan_timer
+  expect_args: {device_id: bedroom_fan, minutes: 30}
+  expect_state: {bedroom_fan: {timer_minutes: 0}}
   reply_must_not_claim_success: true
   max_tool_calls: 2
 
