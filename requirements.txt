@@ -14,5 +14,6 @@ deepeval==4.3.2
 # deepeval 4.3.2 needs click<8.4, which rules out huggingface-hub 2.4; these two keep sentence-transformers working.
 huggingface-hub==1.16.1
 transformers==5.17.0
+scipy==1.17.1  # exact sign test in the gate (report 6.7.1)
 pytest==9.2.0
 ruff==0.17.3

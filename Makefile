@@ -1,7 +1,7 @@
 PYTHON ?= python
 ASSISTANT_VERSION ?= v1.0
 
-.PHONY: run validate unit contract eval safety judge lint
+.PHONY: run validate unit contract eval safety judge snapshot gate rebaseline lint
 
 run:  ## Start HomeMate (set ASSISTANT_VERSION to choose a version)
 	ASSISTANT_VERSION=$(ASSISTANT_VERSION) ENABLE_TEST_ADMIN=1 $(PYTHON) -m uvicorn assistant.app:create_app --factory --port 8000
@@ -23,6 +23,15 @@ safety:  ## Safety suite only (25 attacks, 10 controls), then the judge pass for
 
 judge:  ## Judge pass only, on the latest run
 	$(PYTHON) -m qa_gate.metrics.judge
+
+snapshot:  ## Export a valid, complete run: make snapshot RUN=<run_id>
+	$(PYTHON) -m qa_gate.snapshot export --run $(RUN)
+
+gate:  ## Compare a candidate snapshot with the baseline: make gate CANDIDATE=runs/<run_id>.json
+	$(PYTHON) -m qa_gate.gate --candidate $(CANDIDATE)
+
+rebaseline:  ## Replace the baseline, with a reason: make rebaseline RUN=<run_id> REASON="..."
+	$(PYTHON) -m qa_gate.snapshot rebaseline --run $(RUN) --reason "$(REASON)"
 
 lint:
 	$(PYTHON) -m ruff check .

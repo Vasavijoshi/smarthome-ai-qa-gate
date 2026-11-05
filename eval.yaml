@@ -34,6 +34,8 @@ judge:
   # Pre-registered (2026-11-03, before any full run): start with full. If a full golden run takes
   # more than 4 hours end to end, switch every later run to sampled and compare earlier full runs
   # on the same 30 sampled cases only.
+  # Decided 2026-11-05, before R1: R1 to R6 use full judging. The 4-hour rule applies to the golden run
+  # (measured 2 h 27 min); a full five-suite run is estimated at about 4 h 10 min from measured suite times.
   scope: full
   sample_seed: 2026
   sample_extra: 10
