@@ -368,7 +368,7 @@ def test_safety_summary_shows_run_status_on_every_row(conn):
 
 
 # ---- tools and conversations (6.5.4) ----
-from qa_gate.store import check_honesty_judged  # noqa: E402
+from qa_gate.store import check_claims_judged  # noqa: E402
 
 
 def add_tool(conn, case_id: str, repeat: int, metrics: dict[str, bool], suite: str = "tool") -> int:
@@ -398,11 +398,11 @@ def test_tool_metrics_use_the_majority_of_repeats(conn):
 
 def test_success_claim_if_phrase_or_judge_says_so(conn):
     base = {"T4_call_count": True, "T6_names_failure": True}
-    add_tool(conn, "T-F", 0, {**base, "T6_no_success_phrase": False, "T6_honest_judge": True})
-    add_tool(conn, "T-F", 1, {**base, "T6_no_success_phrase": True, "T6_honest_judge": False})
-    add_tool(conn, "T-F", 2, {**base, "T6_no_success_phrase": True, "T6_honest_judge": True})
+    add_tool(conn, "T-F", 0, {**base, "T6_no_success_phrase": False, "T6_no_claim_judge": True})
+    add_tool(conn, "T-F", 1, {**base, "T6_no_success_phrase": True, "T6_no_claim_judge": False})
+    add_tool(conn, "T-F", 2, {**base, "T6_no_success_phrase": True, "T6_no_claim_judge": True})
     add_tool(conn, "T-G", 0, {"T4_call_count": True, "T6_names_failure": False,
-                              "T6_no_success_phrase": True, "T6_honest_judge": True})  # fmt: skip
+                              "T6_no_success_phrase": True, "T6_no_claim_judge": True})  # fmt: skip
     t = tools(conn)
     assert (t["success_claims"], t["failure_attempts"]) == (2, 4)
     assert t["recovered"] == 1  # only T-F repeat 2 passes every T6 part and names the failure
@@ -427,10 +427,10 @@ def test_scenario_rates_and_consistent_passes(conn):
 
 
 def test_missing_t6_judge_verdict_is_reported(conn):
-    add_tool(conn, "T-F", 0, {"T6_no_success_phrase": True, "T6_honest_judge": True})
+    add_tool(conn, "T-F", 0, {"T6_no_success_phrase": True, "T6_no_claim_judge": True})
     add_tool(conn, "T-F", 1, {"T6_no_success_phrase": True})
     add_tool(conn, "T-A", 0, {"tool_selection": True})
-    assert check_honesty_judged(conn, run_of(conn)) == ["T-F repeat 1: no T6 judge verdict"]
+    assert check_claims_judged(conn, run_of(conn)) == ["T-F repeat 1: no T6 judge verdict"]
 
 
 def test_suite_counts_use_result_counts_per_suite(conn):
@@ -442,3 +442,47 @@ def test_suite_counts_use_result_counts_per_suite(conn):
     assert validate_run(conn, run_of(conn), expected={"tool": 69, "scenario": 2}) == [
         "3 tool results, expected 69"
     ]
+
+
+def add_invalid_failure_attempt(conn, case_id: str, repeat: int) -> None:
+    """A failure attempt whose response was invalid: no reply, phrase check vacuously passed, no judge row."""
+    row = {
+        "run_id": run_of(conn), "suite": "tool", "case_id": case_id, "repeat_idx": repeat, "passed": False,
+        "latency_ms": None, "prompt_tokens": None, "completion_tokens": None, "reply": "",
+        "error_type": "invalid_response", "retrieved_json": None, "eval_ms": 5,
+    }  # fmt: skip
+    metrics = {
+        "response_validity": False,
+        "T4_call_count": True,
+        "T6_no_success_phrase": True,
+        "T6_names_failure": False,
+    }
+    add_result(conn, row, [MetricRow(m, float(p), None, p) for m, p in metrics.items()], [])
+
+
+def test_invalid_response_needs_no_t6_verdict(conn):
+    add_invalid_failure_attempt(conn, "T-F", 0)
+    assert check_claims_judged(conn, run_of(conn)) == []
+
+
+def test_invalid_response_is_neither_a_claim_nor_recovered(conn):
+    add_invalid_failure_attempt(conn, "T-F", 0)
+    add_tool(conn, "T-F", 1, {"T4_call_count": True, "T6_names_failure": True,
+                              "T6_no_success_phrase": True, "T6_no_claim_judge": True})  # fmt: skip
+    t = tools(conn)
+    assert (t["success_claims"], t["recovered"], t["failure_attempts"]) == (0, 1, 2)
+
+
+def test_clear_claim_verdicts_removes_both_names_and_recomputes_passed(conn):
+    from qa_gate.store import clear_claim_verdicts
+
+    add_tool(conn, "T-F", 0, {"T4_call_count": True, "T6_no_success_phrase": True, "T6_honest_judge": False})
+    add_tool(
+        conn, "T-F", 1, {"T4_call_count": True, "T6_no_success_phrase": True, "T6_no_claim_judge": False}
+    )
+    add_tool(
+        conn, "T-F", 2, {"T4_call_count": False, "T6_no_success_phrase": True, "T6_no_claim_judge": True}
+    )
+    assert clear_claim_verdicts(conn, run_of(conn)) == 3
+    passed = [r[0] for r in conn.execute("SELECT passed FROM results ORDER BY repeat_idx")]
+    assert passed == [1, 1, 0]  # judge rows gone; repeat 2 still fails T4

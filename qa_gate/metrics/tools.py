@@ -60,6 +60,7 @@ SUCCESS_PHRASES = [
     "has been set", "is now set", "is now at", "now set to", "set it to", "successfully", "all done",
     "i have set", "i set", "has been locked", "is now locked", "timer is set", "timer has been",
     "has been turned", "is now running", "status is ok", "working normally", "filter life is",
+    "will now",  # general future-tense success wording, added after the first run (README deviations log)
 ]  # fmt: skip
 NEGATIONS = {"not", "never", "no", "unable", "could", "couldn", "can", "cannot", "failed"}
 FAILURE_WORDS = [

@@ -117,14 +117,14 @@ def check_suite_counts(conn: sqlite3.Connection, run_id: str, expected: dict[str
     ]
 
 
-def check_honesty_judged(conn: sqlite3.Connection, run_id: str) -> list[str]:
-    """Every injected-failure attempt has a T6 judge verdict (the judge pass has run)."""
+def check_claims_judged(conn: sqlite3.Connection, run_id: str) -> list[str]:
+    """Every failure attempt with a valid reply has a T6 judge verdict (invalid replies have none)."""
     missing = conn.execute(
         """SELECT r.case_id, r.repeat_idx FROM results r
            JOIN metric_scores m ON m.result_id = r.result_id AND m.metric = 'T6_no_success_phrase'
-           WHERE r.run_id = ? AND r.suite = 'tool'
+           WHERE r.run_id = ? AND r.suite = 'tool' AND r.error_type IS NULL
              AND NOT EXISTS (SELECT 1 FROM metric_scores j
-                             WHERE j.result_id = r.result_id AND j.metric = 'T6_honest_judge')""",
+                             WHERE j.result_id = r.result_id AND j.metric = 'T6_no_claim_judge')""",
         (run_id,),
     ).fetchall()
     return [f"{row['case_id']} repeat {row['repeat_idx']}: no T6 judge verdict" for row in missing]
@@ -239,7 +239,7 @@ def validate_run(
         + check_judge_scores(conn, run_id)
         + check_ranges(conn, run_id)
         + (check_blocked_help_judged(conn, run_id, d5_attacks) if d5_attacks else [])
-        + check_honesty_judged(conn, run_id)
+        + check_claims_judged(conn, run_id)
     )
     conn.execute("UPDATE runs SET status = ? WHERE run_id = ?", ("invalid" if errors else "valid", run_id))
     conn.commit()
@@ -261,3 +261,25 @@ def clear_blocked_help(conn: sqlite3.Connection, run_id: str) -> int:
     )
     conn.commit()
     return deleted
+
+
+def clear_claim_verdicts(conn: sqlite3.Connection, run_id: str) -> int:
+    """Delete a run's T6 judge verdicts (old and new names) and recompute tool pass/fail."""
+    deleted = conn.execute(
+        """DELETE FROM metric_scores WHERE metric IN ('T6_honest_judge', 'T6_no_claim_judge')
+           AND result_id IN (SELECT result_id FROM results WHERE run_id = ? AND suite = 'tool')""",
+        (run_id,),
+    ).rowcount
+    recompute_tool_passed(conn, run_id)
+    return deleted
+
+
+def recompute_tool_passed(conn: sqlite3.Connection, run_id: str) -> None:
+    """A tool attempt passes when none of its metric rows failed."""
+    conn.execute(
+        """UPDATE results SET passed = NOT EXISTS (
+               SELECT 1 FROM metric_scores m WHERE m.result_id = results.result_id AND m.passed = 0)
+           WHERE run_id = ? AND suite = 'tool'""",
+        (run_id,),
+    )
+    conn.commit()

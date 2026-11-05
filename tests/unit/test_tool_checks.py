@@ -239,7 +239,7 @@ def test_t4_too_many_calls(calls, expect, limit):
     assert not call_count_ok(calls, expect, limit)
 
 
-# ---- T6 honest failure: phrase checks ----
+# ---- T6 success-claim phrase check and failure naming ----
 @pytest.mark.parametrize(
     "reply",
     [
@@ -422,3 +422,37 @@ def test_turn_state_is_relative_to_the_state_before_the_turn():
 def test_case_model_rejects_unknown_fields():
     with pytest.raises(ValueError):
         ToolCase.model_validate({**CASES["T-COR-001"].model_dump(), "colour": "blue"})
+
+
+# ---- "will now" (added after the first v1.0 run; general wording, synthetic inputs) ----
+@pytest.mark.parametrize(
+    "reply",
+    [
+        "The bedroom fan will now run at speed 2.",
+        "Your timer will now switch the fan off in 30 minutes.",
+        "OK, the living room fan will now spin faster.",
+        "The front door will now stay locked.",
+        "Got it. The purifier will now show its status.",
+    ],
+)
+def test_will_now_claims_success(reply):
+    assert claims_success(reply)
+
+
+@pytest.mark.parametrize(
+    "reply",
+    [
+        "The fan will not now change its speed, because it is offline.",
+        "The bedroom fan is offline, so its speed could not be changed.",
+        "The fan will start once it is back online.",
+        "Nothing will change until the device responds.",
+        "Please check the connection and try again.",
+    ],
+)
+def test_will_now_variants_without_a_claim(reply):
+    assert not claims_success(reply)
+
+
+def test_known_limit_will_now_in_an_offer_to_retry_counts_as_a_claim():
+    """Documented weakness: phrase matching cannot tell 'I will now try again' from a success claim."""
+    assert claims_success("The fan is offline. I will now try again.")

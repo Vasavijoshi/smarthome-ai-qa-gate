@@ -40,15 +40,18 @@ from qa_gate.datasets.loader import (  # noqa: E402
 )
 from qa_gate.metrics.deterministic import MetricRow  # noqa: E402
 from qa_gate.metrics.safety import keyword_hints  # noqa: E402
+from qa_gate.metrics.tools import claims_success  # noqa: E402
 from qa_gate.store import (  # noqa: E402
     JUDGE_METRICS,
     add_metrics,
     add_safety_result,
     clear_blocked_help,
+    clear_claim_verdicts,
     connect,
     finish_run,
     latest_run_id,
     mark_failed,
+    recompute_tool_passed,
     validate_run,
 )
 
@@ -131,11 +134,11 @@ def build_metric(name: str, judge: OllamaJudge, threshold: float):
             evaluation_params=params,
             **common,
         )
-    if name == "honest_failure":
+    if name == "success_claim":
         params = [SingleTurnParams.INPUT, SingleTurnParams.ACTUAL_OUTPUT]
         return GEval(
-            name="HonestFailure",
-            evaluation_steps=rubric_steps("honest_failure"),
+            name="NoSuccessClaim",
+            evaluation_steps=rubric_steps("success_claim"),
             evaluation_params=params,
             **common,
         )
@@ -289,24 +292,46 @@ def judge_blocked_help(conn: sqlite3.Connection, run_id: str, config: EvalConfig
         )
 
 
-def honest_failure_verdict(question: str, reply: str, judge: OllamaJudge, config: EvalConfig) -> MetricRow:
-    """T6 judge part: how honestly a reply reports an injected failure; below threshold = success claim."""
-    threshold = config.honest_failure_threshold
-    metric = build_metric("honest_failure", judge, threshold)
+def no_claim_verdict(question: str, reply: str, judge: OllamaJudge, config: EvalConfig) -> MetricRow:
+    """T6 judge part (6.5.2): does the reply avoid claiming the command worked? Below threshold = a claim."""
+    threshold = config.no_claim_threshold
+    metric = build_metric("success_claim", judge, threshold)
     metric.measure(LLMTestCase(input=question, actual_output=reply))
     score = float(metric.score)
-    return MetricRow("T6_honest_judge", score, threshold, score >= threshold, metric.reason or "")
+    return MetricRow("T6_no_claim_judge", score, threshold, score >= threshold, metric.reason or "")
 
 
-def judge_honest_failures(conn: sqlite3.Connection, run_id: str, config: EvalConfig) -> None:
-    """Judge every injected-failure attempt without a T6 verdict; a judge error leaves it pending."""
+def rescore_claim_phrases(conn: sqlite3.Connection, run_id: str) -> int:
+    """Re-run the T6 phrase check on stored failure replies; return how many verdicts changed."""
+    rows = conn.execute(
+        """SELECT r.result_id, r.reply, m.passed FROM results r
+           JOIN metric_scores m ON m.result_id = r.result_id AND m.metric = 'T6_no_success_phrase'
+           WHERE r.run_id = ? AND r.suite = 'tool'""",
+        (run_id,),
+    ).fetchall()
+    changed = 0
+    for row in rows:
+        no_claim = not claims_success(row["reply"] or "")
+        if no_claim != bool(row["passed"]):
+            changed += 1
+            conn.execute(
+                "UPDATE metric_scores SET passed = ?, score = ? "
+                "WHERE result_id = ? AND metric = 'T6_no_success_phrase'",
+                (no_claim, float(no_claim), row["result_id"]),
+            )
+    recompute_tool_passed(conn, run_id)
+    return changed
+
+
+def judge_success_claims(conn: sqlite3.Connection, run_id: str, config: EvalConfig) -> None:
+    """Judge each failure attempt that has a reply and no T6 verdict; a judge error leaves it pending."""
     cases = {c.id: c for c in load_tool_cases()}
     rows = conn.execute(
         """SELECT r.result_id, r.case_id, r.repeat_idx, r.reply FROM results r
            JOIN metric_scores m ON m.result_id = r.result_id AND m.metric = 'T6_no_success_phrase'
-           WHERE r.run_id = ? AND r.suite = 'tool'
+           WHERE r.run_id = ? AND r.suite = 'tool' AND r.error_type IS NULL
              AND NOT EXISTS (SELECT 1 FROM metric_scores j
-                             WHERE j.result_id = r.result_id AND j.metric = 'T6_honest_judge')
+                             WHERE j.result_id = r.result_id AND j.metric = 'T6_no_claim_judge')
            ORDER BY r.case_id, r.repeat_idx""",
         (run_id,),
     ).fetchall()
@@ -314,9 +339,7 @@ def judge_honest_failures(conn: sqlite3.Connection, run_id: str, config: EvalCon
     for i, row in enumerate(rows, start=1):
         start = time.perf_counter()
         try:
-            verdict = honest_failure_verdict(
-                cases[row["case_id"]].turns[-1], row["reply"] or "", judge, config
-            )
+            verdict = no_claim_verdict(cases[row["case_id"]].turns[-1], row["reply"] or "", judge, config)
         except Exception as err:  # never record a guess: the run stays invalid until this is judged
             print(f"[{i}/{len(rows)}] {row['case_id']} repeat {row['repeat_idx']}: judge error {err}")
             continue
@@ -328,7 +351,7 @@ def judge_honest_failures(conn: sqlite3.Connection, run_id: str, config: EvalCon
             "UPDATE results SET eval_ms = eval_ms + ? WHERE result_id = ?", (judge_ms, row["result_id"])
         )
         conn.commit()
-        print(f"[{i}/{len(rows)}] {row['case_id']} repeat {row['repeat_idx']} T6 honest={verdict.passed}")
+        print(f"[{i}/{len(rows)}] {row['case_id']} repeat {row['repeat_idx']} T6 no_claim={verdict.passed}")
 
 
 def conversation_turns(scenario: Scenario, replies: list[str]) -> list[Turn]:
@@ -384,6 +407,9 @@ def main() -> None:
     parser.add_argument("--db", type=Path, help="database path (default: eval.yaml db_path)")
     parser.add_argument("--stability", action="store_true", help="re-judge 10 cases 3 times instead")
     parser.add_argument(
+        "--rejudge-t6", action="store_true", help="re-run the T6 phrase check and judge the T6 claims again"
+    )
+    parser.add_argument(
         "--rejudge-d5", action="store_true", help="delete the run's D5 verdicts and judge them again"
     )
     args = parser.parse_args()
@@ -393,11 +419,16 @@ def main() -> None:
     if args.stability:
         judge_stability(conn, run_id, config)
         return
+    if args.rejudge_t6:
+        print(f"T6 phrase verdicts changed by re-scoring: {rescore_claim_phrases(conn, run_id)}")
+        print(
+            f"removed {clear_claim_verdicts(conn, run_id)} T6 judge verdicts; re-judging the stored replies"
+        )
     if args.rejudge_d5:
         print(f"removed {clear_blocked_help(conn, run_id)} D5 verdicts; re-judging the stored replies")
     judge_run(conn, run_id, config)
     judge_blocked_help(conn, run_id, config)
-    judge_honest_failures(conn, run_id, config)
+    judge_success_claims(conn, run_id, config)
     judge_conversations(conn, run_id, config)
     finish_run(conn, run_id)  # the run ends after judging, not when the pytest pass ends
     # Each suite in the run must be complete (e.g. all 60 golden cases), so partial runs are invalid.

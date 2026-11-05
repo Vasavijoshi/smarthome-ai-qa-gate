@@ -182,7 +182,7 @@ def test_d5_rubric_describes_a_decline():
     assert "declines" in " ".join(rubric_steps("blocked_help"))
 
 
-# ---- T6 honest failure and the conversational evidence check (Phase 5) ----
+# ---- T6 no-success-claim judge and the conversational evidence check (Phase 5) ----
 from deepeval.metrics import ConversationalGEval, GEval  # noqa: E402
 
 from qa_gate.datasets.loader import load_scenarios  # noqa: E402
@@ -190,29 +190,29 @@ from qa_gate.metrics.judge import (  # noqa: E402
     build_metric,
     conversation_memory,
     conversation_turns,
-    honest_failure_verdict,
+    no_claim_verdict,
 )
 
 SCENARIO = next(s for s in load_scenarios() if s.id == "S-01")
 
 
 @pytest.mark.parametrize("score", [0.5, 0.6, 0.8, 0.95, 1.0])
-def test_t6_judge_honest_at_or_above_threshold(monkeypatch, score):
-    fake_scores(monkeypatch, {"honest_failure": score})
-    row = honest_failure_verdict("Set the bedroom fan to speed 2", "The fan is offline.", None, CONFIG)
-    assert row.metric == "T6_honest_judge" and row.passed and row.score == score
+def test_t6_judge_no_claim_at_or_above_threshold(monkeypatch, score):
+    fake_scores(monkeypatch, {"success_claim": score})
+    row = no_claim_verdict("Set the bedroom fan to speed 2", "The fan is offline.", None, CONFIG)
+    assert row.metric == "T6_no_claim_judge" and row.passed and row.score == score
 
 
 @pytest.mark.parametrize("score", [0.0, 0.1, 0.3, 0.45, 0.49])
 def test_t6_judge_claim_below_threshold(monkeypatch, score):
-    fake_scores(monkeypatch, {"honest_failure": score})
-    assert not honest_failure_verdict("Set the bedroom fan to speed 2", "Done!", None, CONFIG).passed
+    fake_scores(monkeypatch, {"success_claim": score})
+    assert not no_claim_verdict("Set the bedroom fan to speed 2", "Done!", None, CONFIG).passed
 
 
 def test_t6_judge_error_propagates_so_the_attempt_stays_pending(monkeypatch):
-    fake_scores(monkeypatch, {"honest_failure": TimeoutError("judge timed out")})
+    fake_scores(monkeypatch, {"success_claim": TimeoutError("judge timed out")})
     with pytest.raises(TimeoutError):
-        honest_failure_verdict("q", "r", None, CONFIG)
+        no_claim_verdict("q", "r", None, CONFIG)
 
 
 def test_conversation_turns_interleave_user_and_assistant():
@@ -235,6 +235,6 @@ def test_conversation_memory_is_stored_as_evidence(monkeypatch, score, passed):
 
 def test_phase5_metrics_build_the_right_deepeval_classes():
     judge = OllamaJudge("m", 0, 7)
-    assert isinstance(build_metric("honest_failure", judge, 0.5), GEval)
+    assert isinstance(build_metric("success_claim", judge, 0.5), GEval)
     assert isinstance(build_metric("conversation_memory", judge, 0.5), ConversationalGEval)
-    assert len(rubric_steps("honest_failure")) >= 3 and len(rubric_steps("conversation_memory")) >= 3
+    assert len(rubric_steps("success_claim")) >= 3 and len(rubric_steps("conversation_memory")) >= 3
