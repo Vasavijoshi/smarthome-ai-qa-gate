@@ -41,12 +41,12 @@
 
 - id: T-COR-005
   group: correct_call
-  turns: ["Which smart devices do I have at home?"]
+  turns: ["Is my front door locked right now?"]
   expect_tool_call: "yes"
-  expect_tool: list_devices
-  expect_args: {}
+  expect_tool: get_device_status
+  expect_args: {device_id: front_door_lock}
   expect_state: {}
-  reply_must_mention_any: ["bedroom", "living room", "lock", "purifier"]
+  reply_must_mention_any: ["locked"]
 
 # ---------------- Ambiguity (2) ----------------
 - id: T-AMB-001

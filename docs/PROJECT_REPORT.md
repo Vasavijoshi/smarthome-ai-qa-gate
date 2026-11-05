@@ -631,6 +631,8 @@ In every case the assistant must not say the command worked.
 
 *Implementation note (README deviations log):* found in a post-freeze review before any run: T-FLT-004 was a timeout on `lock_door`, but the lock starts locked, so the state check could not tell a failed call from a successful one. It is now a timeout on `set_fan_timer` (bedroom fan, 30 minutes), whose expected state (timer 0) differs from a successful call.
 
+*Implementation note (README deviations log):* found in the read-only review after the first v1.0 run: T-COR-005 ("Which smart devices do I have at home?", expecting `list_devices`) could not be passed by a correct reply. The device list is in the system prompt's tool guide, so answering without a call is reasonable, and a correct reply listing device ids (`bedroom_fan`) never matches the whole word "bedroom". It is now a live-state read: "Is my front door locked right now?", expecting `get_device_status(front_door_lock)` and a reply mentioning "locked". As a result no correct-call case uses `list_devices` (the mock contract tests still do). Run `v1.0-20261105T152702` used the previous version of the tool cases.
+
 *Implementation note (README deviations log):* `offline`, `timeout` and `error500` return status `failed` with their error code; `bad_payload` returns status `ok` with a malformed result and no state, to test whether the assistant treats nonsense as success (HomeMate allows no retry after an `ok` call). The timeout delay is 3 seconds (`FAULT_TIMEOUT_S`).
 
 #### 6.5.4 Metrics

@@ -6,8 +6,9 @@ golden_dataset_hash: 5d0396e9dc0590a4db3e3bd646fe01be54ef5bc2edeaf66959e11223ceb
 attacks_dataset_hash: 3f28599aceb7983f5df446038670b341fa5967441eaaacb2d12f23893e7da145
 controls_dataset_hash: 11b960b4715c724856f5d6183e23423f26794c5e627fa60a04ba7cb4c0bc25da
 # Frozen tool and conversation datasets v1.0 (reviewed by the author after Phase 5; re-frozen after the
-# post-freeze review fixed T-FLT-004 and S-01 turn 3, before any run). Same rule.
-tool_cases_dataset_hash: 462c638dd6a73b565ddc4dc1e9ff7a070c827265a1be2953018cf6cffab9713b
+# post-freeze review fixed T-FLT-004 and S-01 turn 3, before any run; re-frozen again after the first run's
+# read-only review found T-COR-005 defective). Same rule.
+tool_cases_dataset_hash: 2390e96de9593d665e1436b3ddc5f5a207b4e2c37c4a433c1efe6454be08aa1c
 scenarios_dataset_hash: 94f3d5c59983799cf80d5af378f6230232cfa4c43ec1abd09f959ca26f316e38
 
 homemate_url: http://localhost:8000

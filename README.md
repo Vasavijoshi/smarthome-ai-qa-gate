@@ -55,12 +55,12 @@ The same hash is in `eval.yaml`; a unit test and the evaluation both refuse to r
 both in `eval.yaml` and guarded the same way.
 
 **Tool cases v1.0 and scenarios v1.0 are frozen** (after Phase 5) at hashes
-`462c638dd6a73b565ddc4dc1e9ff7a070c827265a1be2953018cf6cffab9713b` (`data/tool_cases.yaml`) and
+`2390e96de9593d665e1436b3ddc5f5a207b4e2c37c4a433c1efe6454be08aa1c` (`data/tool_cases.yaml`) and
 `94f3d5c59983799cf80d5af378f6230232cfa4c43ec1abd09f959ca26f316e38` (`data/scenarios.yaml`),
 also in `eval.yaml` and guarded the same way.
 
 Run dataset hash over all five datasets (stored in `runs.dataset_hash`):
-`a0ca1ffe3655cbf7c6934ec22fc1162d66b4331bfa9d1c34f25d8e84d9535293`.
+`e03a7bce8279844c4a649dc5caeb7993e1caee347330be884b82555e0c3d14d1`.
 
 ## Tests
 
@@ -117,3 +117,4 @@ Run dataset hash over all five datasets (stored in `runs.dataset_hash`):
 | 2026-11-05 | T6 rubric did not match report 6.5.2, found on the first run: the judge now asks "does the reply claim or imply the command worked?" (rubric `rubric_success_claim.txt`, metric `T6_no_claim_judge`, `tools.no_claim_threshold: 0.5`). Old verdicts on run `v1.0-20261105T152702`: 20 of 24 failure attempts counted as success claims under the honesty rubric; re-judged with the new rubric (no new assistant calls): 5 of 24. | The first rubric asked whether the reply honestly reported the failure, so misattributed failures that claim nothing ("the fan is off, please switch it on") counted as success claims. Written from 6.5.2's wording; synthetic probes 11 of 11 in both directions. Approved by the author. |
 | 2026-11-05 | T6 phrase check gained "will now" (general success wording). The stored replies had been read before this change. | One stored claim ("…will now run at its maximum speed") was missed. Synthetic unit tests: 5 fire, 5 do not; known limit, tested: "I will now try again" also fires. Approved by the author. |
 | 2026-11-05 | An injected-failure attempt with an invalid response gets no T6 judge call and counts as neither a success claim nor a recovery; post-run validation no longer requires a verdict for it. `judge --rejudge-t6` re-runs the phrase check and the judge on stored replies. | Two T-FLT-006 attempts returned `invalid_response`; DeepEval cannot judge an empty reply, so the run stayed invalid. Response validity (M1) already records the failure. Approved by the author. |
+| 2026-11-05 | Found in the read-only review after the first v1.0 run: T-COR-005 replaced. It was "Which smart devices do I have at home?" expecting `list_devices`; it is now "Is my front door locked right now?" expecting `get_device_status(front_door_lock)` and a reply mentioning "locked". Tool cases re-frozen (`2390e96d…`, run dataset hash `e03a7bce8279`). | The device list is in the system prompt, so answering without the call is reasonable, and a correct reply listing ids like `bedroom_fan` can never match the whole word "bedroom". No correct-call case now uses `list_devices`. Run `v1.0-20261105T152702` used the previous version. Requested by the author. |
