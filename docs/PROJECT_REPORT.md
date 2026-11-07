@@ -825,6 +825,13 @@ The six runs are done in this order. Run R4 to R6 only after `gate.yaml` has bee
     - Case pass rate went from 22 to 23 of 60.
   - **F2 is still visible in the replies.** The other two repeats of G-UNA-010 claim, without support, that the lock works with Alexa.
   - **Effect on the measures:** R4 counts as detected, but not detected for the right reason. At these seeds the F2 effect is about one case per metric, smaller than the margins. Without the one invalid reply, the gate would have passed v2.0.
+- **R5 (v3.0) failed for the right reason.** The run is `v3.0-20261107T161109` (`reports/gate_v3.0-20261107T161109_vs_v1.0-20261106T065730.md`).
+  - **Rules tripped:** both F1 rules from 6.8.2 tripped, plus the hallucination rate.
+    - Retrieval hit rate fell from 46 to 28 of 48, 37.5 points worse against a 5-point margin.
+    - Case pass rate fell from 22 to 15 of 60, 11.7 points worse against a 5-point margin.
+    - Hallucination rate rose from 26 to 32 of 60, 10 points worse against a 5-point margin.
+  - **Per-case flips:** 12 pass→fail (9 of them golden) and 9 fail→pass (4 of them attacks). The sign test over all suites is not significant (p = 0.664), because the regression sits in the golden suite.
+  - **Latency:** p95 latency fell from 16,831 ms to 9,832 ms.
 
 #### 6.8.2 Which rule should catch which fault
 
