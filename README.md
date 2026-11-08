@@ -98,6 +98,8 @@ Evidence pull requests (kept open, never merged; each changes only `baselines/ca
 
 In every PR the other three jobs (`lint-unit`, `data-validation`, `contract`) are green.
 
+`main` is protected by the GitHub ruleset `protect-main`: the four `ci.yml` jobs must pass, force pushes and deletions are blocked, and the repository admin may bypass.
+
 ## Limitations
 
 The full list is in report section 10.1. The ones measured in the R1 to R6 runs:
@@ -167,3 +169,4 @@ The full list is in report section 10.1. The ones measured in the R1 to R6 runs:
 | 2026-11-08 | CI gate candidate is named in `baselines/candidate.txt` (R2 on `main`; an evidence PR changes only that file). Snapshot schema check is `python -m qa_gate.snapshot check`. Workflows install CPU-only torch first. | 6.9.1 does not say how CI finds the candidate; no new folder is added. Approved by the author. |
 | 2026-11-08 | Evidence PRs keep the planned three (v1.1, v2.0, v4.0) but show their real gate results: v1.1 red (scenario rate), v2.0 red (response validity), v4.0 red (invalid-state, new critical attack, scenario). The green run is `main` (R2 vs R1). | 6.9.4 expected v1.1 green and v2.0 red on hallucination and abstention; the measured results differ (report 6.8.1). Approved by the author. |
 | 2026-11-08 | Contract latency smoke test: at most 2 s per request (mock client); concurrency smoke test: 10 parallel requests from different sessions. | 7.3 names the tests but not their limits; set before the first run. |
+| 2026-11-08 | Branch protection is the ruleset `protect-main` (required checks `lint-unit`, `data-validation`, `contract`, `gate`; force pushes and deletions blocked); the repository admin may bypass it, so the author can push docs-only commits straight to `main`. | 6.9.1 says all four jobs must pass before a merge; with one author an admin bypass is kept. Set by the author. |
