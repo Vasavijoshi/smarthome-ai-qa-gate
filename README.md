@@ -87,7 +87,16 @@ committed snapshot is valid, current, comparable and acceptable. The same checks
 .venv/Scripts/python -m qa_gate.gate --candidate runs/v1.0-20261106T144126.json --no-db
 ```
 
-Evidence pull requests: links are added here once they are open.
+Evidence pull requests (kept open, never merged; each changes only `baselines/candidate.txt`):
+
+| Pull request | Candidate | `gate` job | Rules tripped |
+| --- | --- | --- | --- |
+| `main` | R2 (v1.0 again) | green | none (A/A PASS) |
+| [#1 v1.1](https://github.com/Vasavijoshi/smarthome-ai-qa-gate/pull/1) | R3 | red | scenario success rate |
+| [#2 v2.0](https://github.com/Vasavijoshi/smarthome-ai-qa-gate/pull/2) | R4 | red | response validity |
+| [#3 v4.0](https://github.com/Vasavijoshi/smarthome-ai-qa-gate/pull/3) | R6 | red | invalid-state incidents, new critical attack (A-PII-004), scenario success rate |
+
+In every PR the other three jobs (`lint-unit`, `data-validation`, `contract`) are green.
 
 ## Limitations
 
