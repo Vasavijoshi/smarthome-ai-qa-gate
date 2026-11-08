@@ -1,12 +1,14 @@
 """Run snapshots (report 6.6.3): a compact JSON of one complete, valid run that the gate (and CI) reads.
 
 Run: python -m qa_gate.snapshot export --run <run_id>
+     python -m qa_gate.snapshot check [files]   (default: the baseline and runs/*.json)
      python -m qa_gate.snapshot rebaseline --run <run_id> --reason "..."
 """
 
 import argparse
 import json
 import sqlite3
+import sys
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -127,6 +129,61 @@ def build_snapshot(conn: sqlite3.Connection, run_id: str, expected: dict[str, in
     }
 
 
+COUNT_METRICS = [
+    "case_pass_rate", "hallucination_rate", "failure_to_abstain_rate", "retrieval_hit_rate",
+    "attack_success_rate_worst3", "false_refusal_rate", "tool_selection_accuracy", "scenario_success_rate",
+    "false_success_claim_rate",
+]  # fmt: skip
+VALUE_METRICS = ["p95_latency", "invalid_state_incidents"]
+
+
+def check_rate(name: str, item: object) -> list[str]:
+    """A rate must have whole counts, 0 <= numerator <= denominator, and value = numerator / denominator."""
+    if not isinstance(item, dict):
+        return [f"{name} is not an object"]
+    num, den, value = item.get("numerator"), item.get("denominator"), item.get("value")
+    if not all(isinstance(x, int) and not isinstance(x, bool) for x in (num, den)):
+        return [f"{name} needs whole-number numerator and denominator"]
+    if den <= 0 or not 0 <= num <= den:
+        return [f"{name} has impossible counts {num} of {den}"]
+    if not isinstance(value, int | float) or abs(value - num / den) > 1e-9:
+        return [f"{name} value {value!r} does not equal {num} / {den}"]
+    return []
+
+
+def check_snapshot(data: object) -> list[str]:
+    """Schema check for CI (6.9.1): every field the gate reads is present and consistent."""
+    if not isinstance(data, dict):
+        return ["snapshot is not a JSON object"]
+    errors = []
+    if data.get("schema_version") != SCHEMA_VERSION:
+        errors.append(f"schema_version is not {SCHEMA_VERSION}")
+    run = data.get("run") if isinstance(data.get("run"), dict) else {}
+    errors += [f"run has no {f}" for f in RUN_FIELDS if run.get(f) in (None, "")]
+    if run and run.get("status") != "valid":
+        errors.append(f"run status is {run.get('status')!r}, not 'valid'")
+    metrics = data.get("metrics") if isinstance(data.get("metrics"), dict) else {}
+    for name in COUNT_METRICS:
+        errors += check_rate(name, metrics.get(name))
+    for name in VALUE_METRICS:
+        value = (metrics.get(name) or {}).get("value")
+        if not isinstance(value, int | float) or isinstance(value, bool) or value < 0:
+            errors.append(f"{name} needs a non-negative value")
+    validity = data.get("response_validity") if isinstance(data.get("response_validity"), dict) else {}
+    for suite in EXPECTED_RESULTS:
+        errors += check_rate(f"response_validity.{suite}", validity.get(suite))
+    critical = data.get("critical_successes")
+    if not isinstance(critical, list) or not all(isinstance(c, str) for c in critical):
+        errors.append("critical_successes must be a list of case ids")
+    cases = data.get("cases")
+    if not isinstance(cases, dict) or not cases:
+        errors.append("cases must be a non-empty object")
+    else:
+        errors += [f"case {k!r} is malformed" for k, v in cases.items()
+                   if k.split(":")[0] not in EXPECTED_RESULTS or not isinstance(v, bool)]  # fmt: skip
+    return errors
+
+
 def write_json(data: dict, path: Path) -> Path:
     """Write sorted, indented JSON with a trailing newline."""
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -142,16 +199,31 @@ def rebaseline(snapshot: dict, reason: str, path: Path = BASELINE_PATH) -> Path:
     return write_json(baseline, path)
 
 
-def main() -> None:
-    """CLI: export a run's snapshot, or make a run the baseline."""
+def check_files(paths: list[Path]) -> int:
+    """CLI check: print every schema error in the given snapshot files; 0 if all are fine, else 1."""
+    failed = 0
+    for path in paths:
+        errors = check_snapshot(json.loads(path.read_text(encoding="utf-8")))
+        failed += bool(errors)
+        print(f"{path}: {'ok' if not errors else '; '.join(errors)}")
+    return 1 if failed else 0
+
+
+def main() -> int:
+    """CLI: export a run's snapshot, make a run the baseline, or check snapshot files (no database needed)."""
     parser = argparse.ArgumentParser(
         description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
     )
-    parser.add_argument("action", choices=["export", "rebaseline"])
-    parser.add_argument("--run", required=True, help="run id")
+    parser.add_argument("action", choices=["export", "rebaseline", "check"])
+    parser.add_argument("paths", nargs="*", type=Path, help="snapshot files (check only)")
+    parser.add_argument("--run", help="run id (export and rebaseline)")
     parser.add_argument("--reason", default="", help="why the baseline changes (rebaseline only)")
     parser.add_argument("--db", type=Path, help="database path (default: eval.yaml db_path)")
     args = parser.parse_args()
+    if args.action == "check":
+        return check_files(args.paths or [BASELINE_PATH, *sorted(RUNS_DIR.glob("*.json"))])
+    if not args.run:
+        parser.error("--run is required for export and rebaseline")
     conn = connect(args.db or load_eval_config().db_path)
     snapshot = build_snapshot(conn, args.run)
     if args.action == "export":
@@ -160,7 +232,8 @@ def main() -> None:
         print(
             f"baseline written to {rebaseline(snapshot, args.reason)}; commit it on its own with the reason"
         )
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())

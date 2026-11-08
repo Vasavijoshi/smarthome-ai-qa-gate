@@ -1,0 +1,79 @@
+# Fast workflow (report 6.9.1): lint and unit tests, data validation, contract tests and the regression gate.
+# baselines/candidate.txt names the candidate snapshot (R2 on main; an evidence PR changes only that file).
+# Every job uses the mock LLM client and the TF-IDF retriever, so no model is downloaded.
+name: ci
+
+on:
+  push:
+  pull_request:
+    branches: [main]
+
+env:
+  LLM_CLIENT: mock
+  RETRIEVER: tfidf
+  PYTHONIOENCODING: utf-8
+
+jobs:
+  lint-unit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: "3.11", cache: pip}
+      - name: Install CPU-only torch, then the pinned requirements
+        run: |
+          python -m pip install torch==2.15.0 --index-url https://download.pytorch.org/whl/cpu
+          python -m pip install -r requirements.txt
+      - run: python -m ruff check .
+      - run: python -m pytest -m unit --junitxml=junit-unit.xml
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with: {name: junit-unit, path: junit-unit.xml}
+
+  data-validation:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: "3.11", cache: pip}
+      - name: Install CPU-only torch, then the pinned requirements
+        run: |
+          python -m pip install torch==2.15.0 --index-url https://download.pytorch.org/whl/cpu
+          python -m pip install -r requirements.txt
+      - run: python -m qa_gate.datasets.validator
+      - run: python -m qa_gate.snapshot check
+
+  contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: "3.11", cache: pip}
+      - name: Install CPU-only torch, then the pinned requirements
+        run: |
+          python -m pip install torch==2.15.0 --index-url https://download.pytorch.org/whl/cpu
+          python -m pip install -r requirements.txt
+      - run: python -m pytest -m contract --junitxml=junit-contract.xml
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with: {name: junit-contract, path: junit-contract.xml}
+
+  gate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: {fetch-depth: 0}  # the gate report records the commit that last changed gate.yaml
+      - uses: actions/setup-python@v5
+        with: {python-version: "3.11", cache: pip}
+      - name: Install CPU-only torch, then the pinned requirements
+        run: |
+          python -m pip install torch==2.15.0 --index-url https://download.pytorch.org/whl/cpu
+          python -m pip install -r requirements.txt
+      - name: Regression gate (candidate named in baselines/candidate.txt)
+        run: python -m qa_gate.gate --candidate "$(head -n 1 baselines/candidate.txt)" --no-db --reports-dir gate-report
+      - name: Gate report to the job summary
+        if: always()
+        run: cat gate-report/*.md >> "$GITHUB_STEP_SUMMARY" || echo "no gate report" >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with: {name: gate-report, path: gate-report/}

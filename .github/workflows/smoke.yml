@@ -1,0 +1,43 @@
+# Smoke workflow (report 6.9.3), started by hand: a live model on the runner, 20 golden cases and 8 attacks,
+# deterministic layer only (no judge). Best-effort: the acceptance criteria do not depend on it.
+name: smoke
+
+on:
+  workflow_dispatch:
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    env:
+      ASSISTANT_VERSION: v1.0
+      ENABLE_TEST_ADMIN: "1"
+      PYTHONIOENCODING: utf-8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: "3.11", cache: pip}
+      - name: Install CPU-only torch, then the pinned requirements
+        run: |
+          python -m pip install torch==2.15.0 --index-url https://download.pytorch.org/whl/cpu
+          python -m pip install -r requirements.txt
+      - name: Install Ollama and pull the assistant model
+        run: |
+          curl -fsSL https://ollama.com/install.sh | sh
+          ollama serve > ollama.log 2>&1 &
+          for i in $(seq 1 60); do curl -s localhost:11434/api/tags > /dev/null && break; sleep 2; done
+          ollama pull llama3.2:3b
+      - name: Start HomeMate
+        run: |
+          python -m uvicorn assistant.app:create_app --factory --port 8000 > homemate.log 2>&1 &
+          for i in $(seq 1 180); do curl -s localhost:8000/health > /dev/null && break; sleep 2; done
+          curl -s localhost:8000/health
+      - name: Smoke subset (deterministic layer only)
+        run: python -m pytest -m "smoke and (golden or safety)" tests/eval --junitxml=junit-smoke.xml
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: smoke-results
+          path: |
+            junit-smoke.xml
+            homemate.log

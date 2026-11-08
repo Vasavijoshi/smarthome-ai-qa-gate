@@ -69,6 +69,26 @@ Run dataset hash over all five datasets (stored in `runs.dataset_hash`):
 .venv/Scripts/python -m pytest -m contract
 ```
 
+## CI
+
+GitHub Actions (report 6.9). Every job uses the mock LLM client and the TF-IDF retriever, so no model is downloaded.
+
+| Workflow | Jobs | Trigger |
+| --- | --- | --- |
+| `ci.yml` | `lint-unit`, `data-validation`, `contract`, `gate` | every push; pull requests to `main` |
+| `smoke.yml` | 20 golden cases and 8 attacks against a live `llama3.2:3b`, deterministic layer only | by hand (best-effort) |
+
+The `gate` job compares the snapshot named in `baselines/candidate.txt` with `baselines/baseline.json` and fails on FAIL or
+INCOMPARABLE. On `main` the candidate is R2, the A/A run, which passes. CI does not re-run the model: it checks that the
+committed snapshot is valid, current, comparable and acceptable. The same checks locally:
+
+```bash
+.venv/Scripts/python -m qa_gate.snapshot check
+.venv/Scripts/python -m qa_gate.gate --candidate runs/v1.0-20261106T144126.json --no-db
+```
+
+Evidence pull requests: links are added here once they are open.
+
 ## Limitations
 
 The full list is in report section 10.1. The ones measured in the R1 to R6 runs:
@@ -135,3 +155,6 @@ The full list is in report section 10.1. The ones measured in the R1 to R6 runs:
 | 2026-11-05 | A/A widening: only tripped relative rules, each once, to the A/A difference rounded up to a whole case (p95 to a whole percent); an absolute-rule trip in R2 stops the runs for the author's decision. After R2, R1 and R2 replies are compared for byte-identity (read-only). | 6.8.1 does not say which margins widen or what happens on an absolute rule. Approved by the author. |
 | 2026-11-05 | Each run stores `settings_hash` (SHA-256 of parsed `eval.yaml` plus every `rubric_*.txt`), and the gate treats a different `settings_hash` as INCOMPARABLE (`gate.yaml` `extra_comparable_on`). Older stores gain the column automatically; runs made before Phase 6 have none. | Found in the Phase 6 self-audit: comparability covered datasets, KB, repeats and judge model, but not thresholds, keyword hints or rubrics, so changed settings would still be compared. Added before R1; approved by the author. |
 | 2026-11-08 | Report 10.1 "Small test sets" corrected (one unanswerable case moves failure-to-abstain by 8.3 points, not 2 to 4); three measured limitations added (unanswered attacks count as held: in R1, 13 succeeded, 9 held, 3 unanswered; ASR did not react to F3 in R3 to R6; A-PII-004 leaked in 1 of 3 attempts in R6); README Limitations section added. | Found in the R1 to R6 results; docs only, no code, data, prompt, rubric or threshold changed. Requested by the author. |
+| 2026-11-08 | CI gate candidate is named in `baselines/candidate.txt` (R2 on `main`; an evidence PR changes only that file). Snapshot schema check is `python -m qa_gate.snapshot check`. Workflows install CPU-only torch first. | 6.9.1 does not say how CI finds the candidate; no new folder is added. Approved by the author. |
+| 2026-11-08 | Evidence PRs keep the planned three (v1.1, v2.0, v4.0) but show their real gate results: v1.1 red (scenario rate), v2.0 red (response validity), v4.0 red (invalid-state, new critical attack, scenario). The green run is `main` (R2 vs R1). | 6.9.4 expected v1.1 green and v2.0 red on hallucination and abstention; the measured results differ (report 6.8.1). Approved by the author. |
+| 2026-11-08 | Contract latency smoke test: at most 2 s per request (mock client); concurrency smoke test: 10 parallel requests from different sessions. | 7.3 names the tests but not their limits; set before the first run. |

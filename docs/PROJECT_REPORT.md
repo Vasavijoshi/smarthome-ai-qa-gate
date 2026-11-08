@@ -880,6 +880,8 @@ Trigger: every push, and every pull request to `main`. All jobs use the mock LLM
 
 The `gate` job writes its Markdown report to the job summary and uploads the JUnit files and the report as artifacts. The `main` branch is protected so that all four jobs must pass before a merge.
 
+*Implementation note (README deviations log):* the `gate` job reads its candidate from `baselines/candidate.txt`, a one-line file that names a committed snapshot. On `main` it names R2 (the A/A run, PASS); an evidence pull request changes only this file. The snapshot schema check is `python -m qa_gate.snapshot check`, which needs no database. It checks every field the gate reads, that every rate's value equals its counts, and that the run is valid. Every job installs CPU-only torch first. Branch protection is a GitHub setting that the author turns on.
+
 #### 6.9.2 What the CI gate does and does not prove
 
 GitHub-hosted runners cannot run a 3-hour model evaluation, so the full evaluation runs on the author's laptop and the snapshot is committed. CI then checks that the snapshot is **valid** (data validation), **current** (configuration hash matches), **comparable** (hashes match) and **acceptable** (gate rules). CI does **not** re-run the model. This limit is stated openly in the README and in Chapter 10.
@@ -891,6 +893,8 @@ A second workflow, started by hand, installs Ollama on the runner, pulls a small
 #### 6.9.4 Evidence
 
 Three pull requests are kept as evidence, with links and screenshots in the README: a v1.1 change (all jobs green), a v2.0 change (gate red on hallucination and abstention rules) and a v4.0 change (gate red on critical attack and invalid-state rules).
+
+*Implementation note (README deviations log):* the measured gate results differ from this expectation. R3 (v1.1) fails on the scenario success rate, and R4 (v2.0) fails on response validity only (see 6.8.1). The three evidence pull requests are kept as planned, and each shows its real gate result: v1.1 red on the scenario rule, v2.0 red on response validity, and v4.0 red on the invalid-state, new-critical-attack and scenario rules. The green run is `main` itself, which gates R2 against R1. Nothing was rerun or tuned.
 
 ### 6.10 Simulated production monitoring
 
@@ -1024,6 +1028,8 @@ The folders `assistant` and `qa_gate` never import from each other. The framewor
 | --- | --- | --- | --: | --- |
 | Unit | Scorers, dataset validator, chunker, retriever, gate logic, drift functions, Pydantic models | `unit` | at least 50 | Laptop and CI |
 | Contract | API schemas, 422 errors, session isolation, tool layer, invariants, fault injection, latency and concurrency smoke test | `contract` | at least 20 | Laptop and CI |
+
+*Implementation note (README deviations log):* the latency smoke test allows 2 seconds per request with the mock client and TF-IDF (a slow reply there means a code problem, not a model one). The concurrency smoke test sends 10 requests at once from different sessions. Both limits were set before the tests were first run.
 | Evaluation | Golden, safety, tool and multi-turn suites against a live model | `golden`, `safety`, `tools`, `multiturn` | 374 per full run | Laptop |
 | Smoke | 20 golden cases and 8 attacks, deterministic layer only | `smoke` | 28 | Laptop and manual CI |
 | System | Regression gate on run snapshots | none | 1 per comparison | Laptop and CI |
