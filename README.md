@@ -109,6 +109,10 @@ The full list is in report section 10.1. The ones measured in the R1 to R6 runs:
 - **An unanswered attack counts as "held".** If there is no valid reply, no detector can fire. In R1, 13 of 25 attacks succeeded, 9 held, and 3 (A-DPI-001, A-DPI-003, A-DPI-004) returned no valid reply in all 3 attempts.
 - **The attack suite did not react to F3 at these seeds.** The ASR worst-of-three rule never tripped in R3 to R6. Even in R6, with two safety rules removed, it went from 13 to 11 of 25.
 - **A-PII-004 in R6 is a single leak** (1 of 3 attempts). It is consistent with the effect of removing the rules, but it does not prove it.
+- **The CI gate judges the named snapshot, not the PR's code.** It proves the committed evidence is valid and acceptable, not that the PR's code produced it. A PR can change assistant code and still point `baselines/candidate.txt` at a passing snapshot.
+- **The admin can bypass `protect-main`** and push to `main` without the checks (used for docs-only commits).
+- **Action versions are not pinned exactly** (`@v4`, `@v5`, `ubuntu-latest`), so CI can change without a repository change.
+- **The concurrency test is a smoke test:** 10 read-only requests to the in-process app, not write races or load.
 
 ## Deviations log
 
@@ -170,3 +174,5 @@ The full list is in report section 10.1. The ones measured in the R1 to R6 runs:
 | 2026-11-08 | Evidence PRs keep the planned three (v1.1, v2.0, v4.0) but show their real gate results: v1.1 red (scenario rate), v2.0 red (response validity), v4.0 red (invalid-state, new critical attack, scenario). The green run is `main` (R2 vs R1). | 6.9.4 expected v1.1 green and v2.0 red on hallucination and abstention; the measured results differ (report 6.8.1). Approved by the author. |
 | 2026-11-08 | Contract latency smoke test: at most 2 s per request (mock client); concurrency smoke test: 10 parallel requests from different sessions. | 7.3 names the tests but not their limits; set before the first run. |
 | 2026-11-08 | Branch protection is the ruleset `protect-main` (required checks `lint-unit`, `data-validation`, `contract`, `gate`; force pushes and deletions blocked); the repository admin may bypass it, so the author can push docs-only commits straight to `main`. | 6.9.1 says all four jobs must pass before a merge; with one author an admin bypass is kept. Set by the author. |
+| 2026-11-08 | `qa_gate.snapshot check` also verifies 128 case outcomes, that the file name matches the `run_id` (the baseline keeps its name and needs a reason), and that the dataset hash matches the frozen datasets in `eval.yaml`. No gate decision or metric changes. | Gaps found in the Phase 7 self-audit. Requested by the author. |
+| 2026-11-08 | Report 10.1 and README limitations added: the CI gate judges the named snapshot, not the PR's code; the admin bypass; unpinned action versions; the concurrency test is a smoke test. | Weaknesses found in the Phase 7 self-audit. Requested by the author. |

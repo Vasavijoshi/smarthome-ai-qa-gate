@@ -5,7 +5,15 @@ import json
 
 import pytest
 
-from qa_gate.snapshot import BASELINE_PATH, RUNS_DIR, check_files, check_snapshot
+from qa_gate.config import EVAL_CONFIG_PATH
+from qa_gate.snapshot import (
+    BASELINE_PATH,
+    RUNS_DIR,
+    check_files,
+    check_identity,
+    check_snapshot,
+    frozen_run_dataset_hash,
+)
 
 pytestmark = pytest.mark.unit
 
@@ -64,6 +72,11 @@ FAILING = {
     ),
     "unknown suite in case key": (changed(lambda d: d["cases"].update({"other:X": True})), "malformed"),
     "not an object": ([], "not a JSON object"),
+    "one case missing (127)": (changed(lambda d: d["cases"].pop("golden:G-FAC-001")), "expected 128"),
+    "one case too many (129)": (
+        changed(lambda d: d["cases"].update({"golden:G-EXTRA": True})),
+        "expected 128",
+    ),
 }
 
 
@@ -84,8 +97,57 @@ def test_every_committed_snapshot_passes():
 
 
 def test_check_files_exit_code(tmp_path):
-    good, bad = tmp_path / "good.json", tmp_path / "bad.json"
+    good, bad = tmp_path / f"{GOOD['run']['run_id']}.json", tmp_path / "bad.json"
     good.write_text(json.dumps(GOOD), encoding="utf-8")
     bad.write_text(json.dumps(FAILING["run not valid"][0]), encoding="utf-8")
     assert check_files([good]) == 0
     assert check_files([good, bad]) == 1
+
+
+# Identity checks (CLI only): file name matches run_id, and the run used the frozen datasets.
+FROZEN = frozen_run_dataset_hash()
+RUN_ID = GOOD["run"]["run_id"]
+PLAIN = changed(lambda d: d.pop("baseline"))
+
+
+@pytest.mark.parametrize(
+    ("data", "path"),
+    [
+        (GOOD, BASELINE_PATH),
+        (PLAIN, RUNS_DIR / f"{RUN_ID}.json"),
+        (PLAIN, RUNS_DIR / "sub" / f"{RUN_ID}.json"),
+        (GOOD, RUNS_DIR / f"{RUN_ID}.json"),  # a run file may keep a baseline block
+        (changed(lambda d: d["run"].update(run_id="v9.9-x")), RUNS_DIR / "v9.9-x.json"),
+    ],
+)
+def test_identity_passes(data, path):
+    assert check_identity(data, path, FROZEN) == []
+
+
+@pytest.mark.parametrize(
+    ("data", "path", "expected"),
+    [
+        (PLAIN, RUNS_DIR / "v1.0-other.json", "does not match run_id"),
+        (PLAIN, RUNS_DIR / "candidate.json", "does not match run_id"),
+        (PLAIN, BASELINE_PATH, "no baseline reason"),
+        (changed(lambda d: d["baseline"].update(reason="")), BASELINE_PATH, "no baseline reason"),
+        (changed(lambda d: d["run"].update(dataset_hash="0" * 64)), BASELINE_PATH, "frozen datasets"),
+        (changed(lambda d: d["run"].pop("dataset_hash")), BASELINE_PATH, "frozen datasets"),
+    ],
+)
+def test_identity_fails(data, path, expected):
+    errors = check_identity(data, path, FROZEN)
+    assert errors and any(expected in e for e in errors), errors
+
+
+def test_frozen_hash_is_the_runs_dataset_hash():
+    assert FROZEN == GOOD["run"]["dataset_hash"]
+
+
+def test_changed_frozen_hash_in_eval_yaml_is_refused(tmp_path):
+    text = EVAL_CONFIG_PATH.read_text(encoding="utf-8")
+    frozen = text.split("attacks_dataset_hash:")[1].split()[0]
+    edited = tmp_path / "eval.yaml"
+    edited.write_text(text.replace(frozen, "0" * 64), encoding="utf-8")
+    with pytest.raises(ValueError, match="attacks"):
+        frozen_run_dataset_hash(edited)

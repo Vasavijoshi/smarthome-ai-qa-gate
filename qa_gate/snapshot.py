@@ -13,7 +13,17 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 from qa_gate.config import load_eval_config
-from qa_gate.datasets.loader import REPO_ROOT, load_attacks
+from qa_gate.datasets.loader import (
+    ATTACKS_PATH,
+    CONTROLS_PATH,
+    GOLDEN_PATH,
+    REPO_ROOT,
+    SCENARIOS_PATH,
+    TOOL_CASES_PATH,
+    load_attacks,
+    load_raw,
+)
+from qa_gate.datasets.validator import dataset_hash, run_dataset_hash
 from qa_gate.store import EXPECTED_RESULTS, connect, validate_run
 
 RUNS_DIR = REPO_ROOT / "runs"
@@ -135,6 +145,9 @@ COUNT_METRICS = [
     "false_success_claim_rate",
 ]  # fmt: skip
 VALUE_METRICS = ["p95_latency", "invalid_state_incidents"]
+EXPECTED_CASES = (
+    128  # one outcome per case: 60 golden + 25 attacks + 10 controls + 23 tool cases + 10 scenarios
+)
 
 
 def check_rate(name: str, item: object) -> list[str]:
@@ -181,6 +194,39 @@ def check_snapshot(data: object) -> list[str]:
     else:
         errors += [f"case {k!r} is malformed" for k, v in cases.items()
                    if k.split(":")[0] not in EXPECTED_RESULTS or not isinstance(v, bool)]  # fmt: skip
+        if len(cases) != EXPECTED_CASES:
+            errors.append(f"cases has {len(cases)} outcomes, expected {EXPECTED_CASES}")
+    return errors
+
+
+def frozen_run_dataset_hash(eval_path: Path | None = None) -> str:
+    """Run dataset hash of the data files, after checking each file against its frozen hash in eval.yaml."""
+    config = load_eval_config(eval_path) if eval_path else load_eval_config()
+    files = {
+        "golden": (GOLDEN_PATH, config.golden_dataset_hash),
+        "attacks": (ATTACKS_PATH, config.attacks_dataset_hash),
+        "controls": (CONTROLS_PATH, config.controls_dataset_hash),
+        "tool_cases": (TOOL_CASES_PATH, config.tool_cases_dataset_hash),
+        "scenarios": (SCENARIOS_PATH, config.scenarios_dataset_hash),
+    }
+    raw = {name: load_raw(path) for name, (path, _) in files.items()}
+    changed = [name for name, (_, frozen) in files.items() if dataset_hash(raw[name]) != frozen]
+    if changed:
+        raise ValueError(f"data files differ from their frozen hashes in eval.yaml: {changed}")
+    return run_dataset_hash(raw)
+
+
+def check_identity(data: dict, path: Path, frozen_hash: str) -> list[str]:
+    """The file is named after its run (the baseline keeps its name and a reason) and uses the frozen data."""
+    run = data.get("run") if isinstance(data.get("run"), dict) else {}
+    errors = []
+    if path.name == BASELINE_PATH.name:
+        if not (data.get("baseline") or {}).get("reason"):
+            errors.append("baseline file has no baseline reason")
+    elif path.stem != run.get("run_id"):
+        errors.append(f"file name {path.name} does not match run_id {run.get('run_id')!r}")
+    if run.get("dataset_hash") != frozen_hash:
+        errors.append("dataset_hash does not match the frozen datasets in eval.yaml")
     return errors
 
 
@@ -200,10 +246,17 @@ def rebaseline(snapshot: dict, reason: str, path: Path = BASELINE_PATH) -> Path:
 
 
 def check_files(paths: list[Path]) -> int:
-    """CLI check: print every schema error in the given snapshot files; 0 if all are fine, else 1."""
+    """CLI check: print schema and identity errors for each snapshot file; 0 if all are fine, else 1."""
+    try:
+        frozen_hash = frozen_run_dataset_hash()
+    except ValueError as error:
+        print(error)
+        return 1
     failed = 0
     for path in paths:
-        errors = check_snapshot(json.loads(path.read_text(encoding="utf-8")))
+        data = json.loads(path.read_text(encoding="utf-8"))
+        errors = check_snapshot(data)
+        errors += check_identity(data, path, frozen_hash) if isinstance(data, dict) else []
         failed += bool(errors)
         print(f"{path}: {'ok' if not errors else '; '.join(errors)}")
     return 1 if failed else 0
