@@ -880,7 +880,7 @@ Trigger: every push, and every pull request to `main`. All jobs use the mock LLM
 
 The `gate` job writes its Markdown report to the job summary and uploads the JUnit files and the report as artifacts. The `main` branch is protected so that all four jobs must pass before a merge.
 
-*Implementation note (README deviations log):* the `gate` job reads its candidate from `baselines/candidate.txt`, a one-line file that names a committed snapshot. On `main` it names R2 (the A/A run, PASS); an evidence pull request changes only this file. The snapshot schema check is `python -m qa_gate.snapshot check`, which needs no database. It checks every field the gate reads, that every rate's value equals its counts, and that the run is valid. Every job installs CPU-only torch first. Branch protection is a GitHub setting that the author turns on.
+*Implementation note (README deviations log):* the `gate` job reads its candidate from `baselines/candidate.txt`, a one-line file that names a committed snapshot. On `main` it names R2 (the A/A run, PASS); an evidence pull request changes only this file. The snapshot schema check is `python -m qa_gate.snapshot check`, which needs no database. It checks every field the gate reads, that every rate's value equals its counts, and that the run is valid. Every job installs CPU-only torch first. Branch protection is a GitHub setting that the author turns on. It is the ruleset `protect-main`, which requires the four jobs and blocks force pushes and deletions. The repository admin (the author) may bypass it, so docs-only commits can go straight to `main`; pull requests still need all four jobs green.
 
 #### 6.9.2 What the CI gate does and does not prove
 
