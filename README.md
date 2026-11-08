@@ -3,7 +3,7 @@
 A QA gate that tests, scores and gates **HomeMate**, a small local LLM smart-home assistant, before each release.
 The full design is in [docs/PROJECT_REPORT.md](docs/PROJECT_REPORT.md).
 
-> Status: Phase 6 built (snapshots, gate, gate.yaml committed before R1); R1 to R6 not started. Phases 3 to 5 done.
+> Status: Phase 6 done: R1 to R6 run and gated (R2 PASS; R3, R4, R5, R6 FAIL; results in report 6.8.1). Phases 3 to 5 done.
 
 ## Setup (Windows, Python 3.11)
 
